@@ -1,0 +1,47 @@
+# Target directory (compiled binaries)
+target/
+
+# Build artifacts
+**/*.rs.bk
+Cargo.lock
+Cargo.toml.orig
+
+# Rust debug output
+debug.log
+*.profdata
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.iml
+
+# Rustfmt and Clippy
+rustfmt.toml
+clippy.toml
+
+# Temporary files and backup files
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Profiling data
+*.gcda
+*.gcno
+
+# C bindings (if using FFI)
+*.o
+*.so
+*.dylib
+*.dll
+
+# Git-specific
+.git/
+
