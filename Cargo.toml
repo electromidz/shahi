@@ -1,0 +1,21 @@
+[package]
+name = "rust-blockchain-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4.39"
+libp2p = { version = "0.55.0", features = [
+  "tcp",
+  "websocket",
+  "noise",
+  "yamux",
+] }
+log = "0.4.25"
+pretty_env_logger = "0.5.0"
+rand = "0.9.0"
+secp256k1 = { version = "0.30.0", features = ["rand", "hashes"] }
+serde = "1.0.217"
+serde_json = "1.0.137"
+sha2 = "0.10.8"
+tokio = { version = "1", features = ["full"] }
