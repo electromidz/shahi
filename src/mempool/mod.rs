@@ -21,4 +21,14 @@ impl Mempool {
     pub fn get_transactions(&mut self) -> Vec<Transaction> {
         self.transactions.drain(..).collect()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.transactions.is_empty()
+    }
+
+    pub fn remove_transaction(&mut self, transaction: &Transaction) {
+        if let Some(pos) = self.transactions.iter().position(|t| t == transaction) {
+            self.transactions.remove(pos);
+        }
+    }
 }

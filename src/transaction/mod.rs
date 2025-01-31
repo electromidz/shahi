@@ -3,30 +3,38 @@ use secp256k1::hashes::{sha256, Hash};
 use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use std::str::FromStr;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Transaction {
-    pub sender: String,     // Sender's public key (address)
-    pub receiver: String,   // Receiver's public key (address)
-    pub amount: u64,        // Amount being transferred
-    pub signature: Vec<u8>, // Digital signature
+    pub sender: String,          // Sender's public key (address)
+    pub receiver: String,        // Receiver's public key (address)
+    pub amount: Option<u64>,     // Amount being transferred
+    pub payload: Option<String>, // Use for messaging NFT, etc
+    pub signature: Vec<u8>,      // Digital signature
 }
 
 impl Transaction {
     // Create a new transaction
-    pub fn new(sender: String, receiver: String, amount: u64, secret_key: &SecretKey) -> Self {
+    pub fn new(
+        sender: String,
+        receiver: String,
+        amount: Option<u64>,
+        payload: Option<String>,
+        secret_key: &SecretKey,
+    ) -> Self {
         let message = Self::create_message(&sender, &receiver, amount);
         let signature = Self::sign_transaction(&message, secret_key);
         Transaction {
             sender,
             receiver,
             amount,
+            payload,
             signature,
         }
     }
 
     // Create a message to sign (sender + receiver + amount)
-    fn create_message(sender: &str, receiver: &str, amount: u64) -> Message {
-        let data = format!("{}{}{}", sender, receiver, amount);
+    fn create_message(sender: &str, receiver: &str, amount: Option<u64>) -> Message {
+        let data = format!("{}{}{:?}", sender, receiver, amount);
         let hash = sha256::Hash::hash(data.as_bytes());
         Message::from_digest(hash.to_byte_array())
     }
@@ -66,17 +74,26 @@ mod tests {
         let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
         let sender = public_key.to_string();
         let receiver = "receiver_address".to_string();
+        let payload =
+            Some("{\"type\": \"NFT\", \"id\": \"123\", \"name\": \"Rare Dragon\"}".to_string());
 
         // Create a new transaction
-        let amount = 100;
-        let transaction = Transaction::new(sender.clone(), receiver.clone(), amount, &secret_key);
+        let amount = Some(100);
+
+        let transaction = Transaction::new(
+            sender.clone(),
+            receiver.clone(),
+            amount,
+            payload,
+            &secret_key,
+        );
 
         // Verify the transaction's signature
         assert!(transaction.verify_signature());
 
         // Tamper with the transaction and verify it fails
         let mut tampered_transaction = transaction.clone();
-        tampered_transaction.amount = 200; // Change the amount
+        tampered_transaction.amount = Some(200); // Change the amount
         assert!(!tampered_transaction.verify_signature()); // Should fail
     }
 }

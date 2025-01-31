@@ -1,53 +1,62 @@
-use blockchain::Blockchain;
-use mempool::Mempool;
-use transaction::Transaction;
-//use peer_to_peer::PeerToPeer;
-use std::error::Error;
+mod lib;
 
+use blockchain::Blockchain;
+
+use mempool::Mempool;
+use std::error::Error;
+use transaction::Transaction;
 // modules
-mod block;
-mod blockchain;
-mod mempool;
-mod peer_to_peer;
-mod transaction;
+pub mod block;
+pub mod blockchain;
+pub mod contracts;
+pub mod mempool;
+pub mod peer_to_peer;
+pub mod transaction;
 
 use secp256k1::rand::rngs::OsRng;
-use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
+use secp256k1::Secp256k1;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let mut blockchain = Blockchain::new(1);
+    let mut mempool = Mempool::new();
 
     let secp = Secp256k1::new();
     let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
     let sender = public_key.to_string();
     let receiver = "receiver_address".to_string();
+    let payload = Some("{\"type\":\"message\", \"content\":\"Hello, Blockchain!\"}".to_string()); // Example message payload
 
     // Create a new transaction
-    let amount = 100;
-    let transaction = Transaction::new(sender, receiver, amount, &secret_key);
+    let amount = Some(100);
+    let transaction = Transaction::new(sender, receiver, amount, payload, &secret_key);
 
-    let mut mempool = Mempool::new();
-    let rans = mempool.get_transactions();
+    if transaction.verify_signature() {
+        println!("✅ Transaction is valid. Adding to mempool...");
+        mempool.add_transaction(transaction.clone());
+    } else {
+        println!("❌ Transaction verification failed.");
+        return Ok(());
+    }
 
-    println!("{:?}", rans);
+    let transactions = mempool.get_transactions();
+
+    // Add transactions to a new block
+    if !transactions.is_empty() {
+        blockchain.add_block(transactions.clone());
+
+        // Remove transactions from mempool after adding them to a block
+        for tx in transactions {
+            mempool.remove_transaction(&tx);
+        }
+    } else {
+        println!("⚠️ No transactions available for the new block.");
+    }
+
+    // Print the current blockchain state
+    println!("📌 Blockchain State:\n{:?}", blockchain);
+
+    // Print the current mempool state
+    println!("📌 Mempool State:\n{:?}", mempool.get_transactions());
 
     Ok(())
 }
-
-// println!("Mining block 1...");
-// blockchain.add_block("First block data".to_string());
-//
-// println!("Mining block 2...");
-// blockchain.add_block("Second block data".to_string());
-//
-// println!("Mining block 3...");
-// blockchain.add_block("Third block data".to_string());
-//
-// println!("\nBlockchain:");
-// for block in &blockchain.chain {
-//     println!("{}", block);
-// }
-//
-// println!("\nIs blockchain valid? {}", blockchain.is_chain_valid());
-//
-// PeerToPeer::init().await?;

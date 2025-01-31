@@ -1,6 +1,7 @@
 use crate::block::Block;
 use crate::transaction::Transaction;
 
+#[derive(Debug, Clone)]
 pub struct Blockchain {
     pub chain: Vec<Block>,
     pub difficulty: usize,

@@ -1780,22 +1780,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-blockchain-example"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "libp2p",
- "log",
- "pretty_env_logger",
- "rand 0.9.0",
- "secp256k1",
- "serde",
- "serde_json",
- "sha2",
- "tokio",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1961,6 +1945,22 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "shahi"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "libp2p",
+ "log",
+ "pretty_env_logger",
+ "rand 0.9.0",
+ "secp256k1",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
 ]
 
 [[package]]
