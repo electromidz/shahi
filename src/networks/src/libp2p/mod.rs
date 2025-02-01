@@ -1,8 +1,13 @@
-pub mod types;
-use types::types::InitResult;
+pub mod types; // Declare the `types` module
 
-pub fn init() -> InitResult {
-    Ok(true)
+use types::types::InitResult; // Import `InitResult` from the `types` module
+
+pub struct Network {}
+
+impl Network {
+    pub fn init() -> InitResult {
+        Ok(true)
+    }
 }
 
 #[cfg(test)]
@@ -10,9 +15,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn check_server() -> InitResult {
-        let init_server = init()?; // Unwrap the Result
+    fn check_server() -> Result<(), Box<dyn std::error::Error>> {
+        let init_server = Network::init()?; // Unwrap the Result
         assert_eq!(init_server, true); // Compare the inner bool value
-        Ok(true) // Explicitly return `Ok(())`
+        Ok(()) // Return `Ok(())` for tests
     }
 }
