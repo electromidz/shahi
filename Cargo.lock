@@ -1425,6 +1425,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "networks"
+version = "0.1.0"
+
+[[package]]
 name = "nix"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1954,6 +1958,7 @@ dependencies = [
  "chrono",
  "libp2p",
  "log",
+ "networks",
  "pretty_env_logger",
  "rand 0.9.0",
  "secp256k1",
