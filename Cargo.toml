@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-networks = { path = "src/networks" }
+networks = { path = "./src/networks" }
 chrono = "0.4.39"
 libp2p = { version = "0.55.0", features = [
   "tcp",

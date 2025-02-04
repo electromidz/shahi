@@ -1,39 +1,46 @@
-# Use the official Rust image as a base image
-#FROM rust:latest as builder
+# Use the official Rust image to build the binary
 FROM rust:1.77 AS builder
-
 
 # Set the working directory
 WORKDIR /src
 
-# Copy the Cargo.toml and Cargo.lock files
-COPY Cargo.toml Cargo.lock ./
+# Ensure Cargo is up-to-date
+RUN rustup update stable && rustup default stable
 
-# Create a dummy main.rs file to pre-compile dependencies
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-
-# Build the dependencies (this step will cache the dependencies)
-RUN cargo build --release
-
-# Remove the dummy main.rs file
-RUN rm -rf src
-
-# Copy the rest of the source code
-COPY . .
-
-# Build the application
-RUN cargo build --release
-
-# Use a smaller base image for the final image
-FROM debian:buster-slim
-
-# Install necessary libraries (if any)
+# Install dependencies needed for Rust crates
 RUN apt-get update && apt-get install -y \
-    libssl-dev \
+    pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the built binary from the builder stage
-COPY --from=builder /usr/src/app/target/release/your_app_name /usr/local/bin/your_app_name
+# Copy only Cargo files first for better caching
+COPY Cargo.toml Cargo.lock ./
 
-# Set the entry point to run the application
+# Pre-build dependencies to leverage caching
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release || true  # Allow failure due to missing dependencies
+
+# Copy the full source code
+COPY . .  
+
+# Build the final Rust binary
+RUN cargo build --release
+
+# Use a newer Debian base image with GLIBC 2.36+
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the compiled Rust binary from the builder stage
+COPY --from=builder /src/target/release/shahi /usr/local/bin/shahi
+
+# Ensure it's executable
+RUN chmod +x /usr/local/bin/shahi
+
+# Expose the required port
+EXPOSE 8080
+
+# Set the entry point
 ENTRYPOINT ["/usr/local/bin/shahi"]
