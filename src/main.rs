@@ -3,6 +3,8 @@ mod lib;
 use blockchain::Blockchain;
 
 use mempool::Mempool;
+use networks::init_p_2_p;
+use networks::libp2p::Libp2pNetwork;
 use std::error::Error;
 use transaction::Transaction;
 // modules
@@ -10,7 +12,6 @@ pub mod block;
 pub mod blockchain;
 pub mod contracts;
 pub mod mempool;
-pub mod peer_to_peer;
 pub mod transaction;
 
 use secp256k1::rand::rngs::OsRng;
@@ -58,5 +59,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Print the current mempool state
     println!("📌 Mempool State:\n{:?}", mempool.get_transactions());
 
+    if let Err(e) = init_p_2_p().await {
+        eprintln!("have error on init_p_2_p", e)
+    }
     Ok(())
 }

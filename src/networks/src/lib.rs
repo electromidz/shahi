@@ -1,15 +1,12 @@
 mod libp2p;
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+use std::error::Error;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+use libp2p::Libp2pNetwork;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub async fn init_p_2_p() -> Result<(), Box<dyn Error>> {
+    let mut network = Libp2pNetwork::new().unwrap();
+    network.listen("/ip4/0.0.0.0/tcp/8080").unwrap();
+
+    network.run().await;
+    Ok(())
 }
