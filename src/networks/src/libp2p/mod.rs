@@ -1,9 +1,4 @@
-use libp2p::{
-    futures::StreamExt,
-    noise, ping,
-    swarm::{self, Swarm},
-    tcp, yamux, Multiaddr, SwarmBuilder,
-};
+use libp2p::{futures::StreamExt, noise, ping, swarm::Swarm, tcp, yamux, Multiaddr, SwarmBuilder};
 use std::{error::Error, time::Duration};
 
 #[warn(dead_code)]
@@ -59,7 +54,7 @@ fn instance_swarm() {
 
 #[tokio::test]
 async fn instance() {
-    let mut network = Libp2pNetwork::new();
+    let network = Libp2pNetwork::new();
     assert!(network.is_ok(), "Faild to create network");
 
     let mut network = network.unwrap();
