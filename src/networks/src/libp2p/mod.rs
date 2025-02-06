@@ -1,3 +1,4 @@
+pub use libp2p::swarm::dummy::Behaviour as DummyBehaviour;
 use libp2p::{futures::StreamExt, noise, ping, swarm::Swarm, tcp, yamux, Multiaddr, SwarmBuilder};
 use std::{error::Error, time::Duration};
 
@@ -21,6 +22,19 @@ impl Libp2pNetwork {
             .build();
 
         Ok(Self { swarm })
+    }
+
+    pub async fn create_swarm() -> Swarm<DummyBehaviour> {
+        let tcp_config = tcp::Config::default();
+        let security_upgrade = noise::Config::new;
+        let multiplexer_upgrade = yamux::Config::default;
+        SwarmBuilder::with_new_identity()
+            .with_tokio()
+            .with_tcp(tcp_config, security_upgrade, multiplexer_upgrade)
+            .unwrap()
+            .with_behaviour(|_| DummyBehaviour)
+            .unwrap()
+            .build()
     }
 
     pub async fn run(&mut self) {
