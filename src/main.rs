@@ -66,9 +66,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut network1 = Network::create().await;
     let mut network2 = Network::create().await;
 
-    // Start listening on network1
+    //Start listening on network1
     network1
-        .listen_on("/ip4/127.0.0.1/tcp/8080".parse().unwrap())
+        .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
         .unwrap();
 
     println!("💈 Network1 is listening on /ip4/127.0.0.1/tcp/8080\n");
@@ -77,13 +77,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     sleep(Duration::from_secs(2)).await;
 
     // Network2 dials network1
-    match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
-        Ok(_) => println!("📞 Network2 dialing Network1..."),
-        Err(e) => {
-            eprintln!("❌ Network2 failed to dial: {:?}", e);
-        }
-    }
-
+    // match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
+    //     Ok(_) => println!("📞 Network2 dialing Network1..."),
+    //     Err(e) => {
+    //         eprintln!("❌ Network2 failed to dial: {:?}", e);
+    //     }
+    // }
+    //
     // Process events concurrently for both networks
     loop {
         tokio::select! {
@@ -92,11 +92,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     println!("🌐 Network1 Event: {:?}\n", event);
                 }
             }
-            event = network2.next() => {
-                if let Some(event) = event {
-                    println!("📡 Network2 Event: {:?}\n", event);
-                }
-            }
+            // event = network2.next() => {
+            //     if let Some(event) = event {
+            //         println!("📡 Network2 Event: {:?}\n", event);
+            //     }
+            // }
         }
     }
     Ok(())
