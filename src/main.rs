@@ -4,6 +4,7 @@ use libp2p::futures::StreamExt;
 use libp2p::Multiaddr;
 use mempool::Mempool;
 use networks::Network;
+use server::Server;
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -19,6 +20,9 @@ use secp256k1::rand::rngs::OsRng;
 use secp256k1::Secp256k1;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    println!("🦀");
+    Server::start_server().await;
+
     let mut blockchain = Blockchain::new(1);
     let mut mempool = Mempool::new();
 
@@ -60,43 +64,45 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Print the current mempool state
     println!("📌 Mempool State:\n{:?}", mempool.get_transactions());
 
+    //server run
+
     // if let Err(e) = init_p_2_p().await {
     //     eprintln!("have error on init_p_2_p {:?}", e)
     // }
-    let mut network1 = Network::create().await;
+    //let mut network1 = Network::create().await;
     let mut network2 = Network::create().await;
 
     //Start listening on network1
-    network1
-        .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
-        .unwrap();
+    // network1
+    //     .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
+    //     .unwrap();
 
-    println!("💈 Network1 is listening on /ip4/127.0.0.1/tcp/8080\n");
+    println!("💈 Network1 is listening on /ip4/0.0.0.0/tcp/8080\n");
 
     // Give some time for network1 to start before dialing
     sleep(Duration::from_secs(2)).await;
 
     // Network2 dials network1
-    // match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
-    //     Ok(_) => println!("📞 Network2 dialing Network1..."),
-    //     Err(e) => {
-    //         eprintln!("❌ Network2 failed to dial: {:?}", e);
-    //     }
-    // }
+    match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
+        Ok(_) => println!("📞 Network2 dialing Network1..."),
+        Err(e) => {
+            eprintln!("❌ Network2 failed to dial: {:?}", e);
+        }
+    }
     //
     // Process events concurrently for both networks
     loop {
         tokio::select! {
-            event = network1.next() => {
-                if let Some(event) = event {
-                    println!("🌐 Network1 Event: {:?}\n", event);
-                }
-            }
-            // event = network2.next() => {
+            // event = network1.next() => {
             //     if let Some(event) = event {
-            //         println!("📡 Network2 Event: {:?}\n", event);
+            //         println!("🌐 Network1 Event: {:?}\n", event);
             //     }
             // }
+            event = network2.next() => {
+                if let Some(event) = event {
+                    println!("📡 Network2 Event: {:?}\n", event);
+                }
+            }
         }
     }
     Ok(())
