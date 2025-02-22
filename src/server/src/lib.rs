@@ -21,9 +21,9 @@ impl Server {
             .install_default()
             .expect("Failed to install rustls crypto provider");
 
-        let key_der = load_private_key("server.key")?;
+        let key_der = load_private_key("certs/server.key")?;
         // Load the certificate chain
-        let cert_chain = load_certificate_chain("server.crt")?;
+        let cert_chain = load_certificate_chain("certs/server.crt")?;
 
         // Build the server configuration
         let server_crypto = ServerConfig::builder()
