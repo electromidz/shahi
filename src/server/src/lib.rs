@@ -1,20 +1,16 @@
-use quinn::crypto::rustls::QuicServerConfig;
 use quinn::rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
-use std::sync::Arc;
+use rustls::ServerConfig;
 mod auth;
 mod route;
 mod tls;
-use clap::Parser;
-use quinn::{rustls, ServerConfig, TransportConfig};
-
-use h3_quinn::quinn::{Endpoint, VarInt};
-use route::get_routes;
+use h3_quinn::quinn::Endpoint;
+use quinn::crypto::rustls::QuicServerConfig;
+use quinn::rustls;
+use rustls_pemfile::{certs, pkcs8_private_keys};
 use std::error::Error;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use tls::load_tls_config;
-use tracing::{error, info, info_span, instrument};
-
-use std::fs;
+use std::fs::File;
+use std::io::BufReader;
+use std::sync::Arc;
 
 pub struct Server;
 
@@ -24,140 +20,80 @@ impl Server {
         rustls::crypto::ring::default_provider()
             .install_default()
             .expect("Failed to install rustls crypto provider");
-        // First of all need to create cert and key
 
-        let key: Vec<u8> = fs::read("key.pem").expect("Failed to load key.pem file!");
-        let cert: Vec<u8> = fs::read("cert.pem").expect("Failed to load cert.pem file!");
+        let key_der = load_private_key("server.key")?;
+        // Load the certificate chain
+        let cert_chain = load_certificate_chain("server.crt")?;
 
-        // should be handle if we dont have kem.pem return error
-        let key_der = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key));
-
-        let cert_chain = vec![CertificateDer::from(cert)];
-
-        let server_crypto = rustls::ServerConfig::builder()
+        // Build the server configuration
+        let server_crypto = ServerConfig::builder()
             .with_no_client_auth()
-            .with_single_cert(cert_chain, key_der)?;
+            .with_single_cert(cert_chain, key_der)
+            .expect("Failed to create server config");
 
-        let mut server_config =
+        // Print the server configuration for debugging
+        println!(
+            "Server configuration created successfully: {:?}\n",
+            server_crypto
+        );
+
+        // Start your server logic here
+        // For example, you can use `server_config` with Quinn or another library.
+        let server_config =
             quinn::ServerConfig::with_crypto(Arc::new(QuicServerConfig::try_from(server_crypto)?));
 
-        let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
-        transport_config.max_concurrent_uni_streams(0_u8.into());
+        let server = Endpoint::server(server_config, "127.0.0.1:5050".parse().unwrap()).unwrap();
+        println!("Server is running on 127.0.0.1:5050");
 
-        let addr: SocketAddr = "0.0.0.0:443".parse()?; // Ensure address is set
-        let endpoint = quinn::Endpoint::server(server_config, addr)?;
-        eprintln!("listening on {}", endpoint.local_addr()?);
-
-        let connection_limit = Some(10);
-        let block_socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
-        let block = Some(block_socket);
-        let stateless_retry = true;
-        let root = get_routes();
-        while let Some(conn) = endpoint.accept().await {
-            let remote_addr = conn.remote_address();
-            if connection_limit.is_some_and(|n| endpoint.open_connections() >= n) {
-                info!("Refusing connection from {}: limit reached", remote_addr);
-                conn.refuse();
-                continue;
-            }
-
-            if Some(remote_addr) == block {
-                info!("Refusing blocked client IP address: {}", remote_addr);
-                conn.refuse();
-                continue;
-            }
-
-            if stateless_retry && !conn.remote_address_validated() {
-                info!(
-                    "Requiring connection from {} to validate address",
-                    remote_addr
-                );
-                conn.retry().unwrap();
-                continue;
-            }
-
-            info!("Accepting connection from {}", remote_addr);
-            let fut = handle_connection(root.clone(), conn);
-            tokio::spawn(async move {
-                if let Err(e) = fut.await {
-                    error!("Connection failed: {:?}", e);
-                }
-            });
+        // Accept incoming connections
+        while let Some(connecting) = server.accept().await {
+            let connection = connecting.await?;
+            println!("New connection: {:?}", connection.remote_address());
         }
+
+        // while let Some(connecting) = server.accept().await {
+        //     let connection = connecting.await?;
+        //     println!("{:?}  - {:?}\n", connection.stats(), connection.rtt());
+        // }
 
         Ok(())
     }
 }
 
-async fn handle_connection(root: Arc<Path>, conn: quinn::Incoming) -> Result<()> {
-    let connection = conn.await?;
-    let span = info_span!(
-        "connection",
-        remote = %connection.remote_address(),
-        protocol = %connection
-            .handshake_data()
-            .unwrap()
-            .downcast::<quinn::crypto::rustls::HandshakeData>().unwrap()
-            .protocol
-            .map_or_else(|| "<none>".into(), |x| String::from_utf8_lossy(&x).into_owned())
-    );
-    async {
-        info!("established");
+fn load_private_key(path: &str) -> Result<PrivateKeyDer, Box<dyn std::error::Error>> {
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file);
+    // Parse the PEM file and extract PKCS#8 private keys
+    let keys: Vec<PrivatePkcs8KeyDer> =
+        pkcs8_private_keys(&mut reader).collect::<Result<Vec<_>, _>>()?;
 
-        // Each stream initiated by the client constitutes a new request.
-        loop {
-            let stream = connection.accept_bi().await;
-            let stream = match stream {
-                Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
-                    info!("connection closed");
-                    return Ok(());
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-                Ok(s) => s,
-            };
-            let fut = handle_request(root.clone(), stream);
-            tokio::spawn(
-                async move {
-                    if let Err(e) = fut.await {
-                        error!("failed: {reason}", reason = e.to_string());
-                    }
-                }
-                .instrument(info_span!("request")),
-            );
-        }
+    // Check if any keys were found
+    if keys.is_empty() {
+        return Err("No PKCS#8 private keys found in the file".into());
     }
-    .instrument(span)
-    .await?;
-    Ok(())
+
+    // Use the first key (you can modify this logic if multiple keys are expected)
+    let key = keys.into_iter().next().unwrap(); // Safe to unwrap because we checked `is_empty`
+    Ok(PrivateKeyDer::Pkcs8(key))
 }
 
-// let addr: SocketAddr = "0.0.0.0:443".parse()?; // Ensure address is set
-//                                                // load TLS config
-// let tls_config = load_tls_config().unwrap();
-//
-// // Create QUIC endpoint
-// let routes = get_routes();
-// let mut server_config =
-//     ServerConfig::with_crypto(Arc::new(QuicServerConfig::try_from(tls_config)?));
-//
-// // Optimize QUIC transport
-// let mut transport_config = TransportConfig::default();
-// transport_config.max_concurrent_uni_streams(VarInt::from_u32(100)); // Fixed method usage
-// transport_config.max_idle_timeout(Some(VarInt::from_u32(10_000).into())); // Optional: Add timeout
-//
-// server_config.transport = Arc::new(transport_config);
-//
-// //let endpoint = quinn::Endpoint::server(server_config, addr);
-// let endpoint = Endpoint::server(server_config, addr).unwrap();
-//
-// // Handle incoming connections
-// while let Some(new_conn) = endpoint.accept().await {
-//     // Here you would typically handle the connection, for example:
-//     // spawn a task to handle the connection or use it directly.
-//     tokio::spawn(async move {
-//         // Handle new connection here
-//         println!("New connection: {:?}", new_conn);
-//     });
-// }
+fn load_certificate_chain(path: &str) -> Result<Vec<CertificateDer>, Box<dyn Error>> {
+    //regenerate key with this
+    //openssl req -x509 -newkey rsa:2048 -keyout server.key -out server.crt -days 365 -nodes -subj "/CN=localhost"
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file);
+
+    // Parse the PEM file and extract certificates
+    let certs: Vec<CertificateDer> = certs(&mut reader)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .map(CertificateDer::from)
+        .collect();
+
+    // Check if any certificates were found
+    if certs.is_empty() {
+        return Err("No certificates found in the file".into());
+    }
+
+    Ok(certs)
+}

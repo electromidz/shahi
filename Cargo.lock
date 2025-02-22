@@ -2066,7 +2066,7 @@ dependencies = [
  "futures-rustls",
  "libp2p-core",
  "libp2p-identity",
- "rcgen",
+ "rcgen 0.11.3",
  "ring 0.17.8",
  "rustls",
  "rustls-webpki 0.101.7",
@@ -2859,6 +2859,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rcgen"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75e669e5202259b5314d1ea5397316ad400819437857b90861765f24c4cf80a2"
+dependencies = [
+ "pem",
+ "ring 0.17.8",
+ "rustls-pki-types",
+ "time",
+ "yasna",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3283,6 +3296,7 @@ dependencies = [
  "jsonwebtoken",
  "quinn",
  "rand 0.9.0",
+ "rcgen 0.13.2",
  "rustls",
  "rustls-pemfile",
  "serde",
@@ -3331,6 +3345,7 @@ dependencies = [
  "server",
  "sha2",
  "tokio",
+ "tracing-subscriber",
 ]
 
 [[package]]
