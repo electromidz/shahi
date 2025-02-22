@@ -23,7 +23,37 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("🦀");
     // Initialize logging
     tracing_subscriber::fmt::init();
-    Server::start_server().await;
+
+    // Start the server in the background
+    let server_handle = tokio::spawn(async {
+        if let Err(e) = Server::start_server().await {
+            eprintln!("Server error: {:?}", e);
+        }
+    });
+
+    // Main program continues executing other tasks
+    println!("Server is running in the background...");
+
+    // Simulate other work in the main program
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    println!("Main program is doing other work...");
+
+    // Use `tokio::select!` to run both tasks concurrently
+    tokio::select! {
+        // Wait for the server task to finish (optional)
+        _ = server_handle => {
+            println!("Server task finished.");
+        }
+        // Simulate other work in the main program
+        _ = async {
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            println!("Main program is doing other work...");
+
+            // Simulate more work
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            println!("Main program finished its work.");
+        } => {}
+    }
 
     let mut blockchain = Blockchain::new(1);
     let mut mempool = Mempool::new();
@@ -72,40 +102,40 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //     eprintln!("have error on init_p_2_p {:?}", e)
     // }
     //let mut network1 = Network::create().await;
-    // let mut network2 = Network::create().await;
+    let mut network2 = Network::create().await;
+
+    //Start listening on network1
+    // network1
+    //     .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
+    //     .unwrap();
+
+    println!("💈 Network1 is listening on /ip4/0.0.0.0/tcp/8080\n");
+
+    // Give some time for network1 to start before dialing
+    sleep(Duration::from_secs(2)).await;
+
+    // Network2 dials network1
+    match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
+        Ok(_) => println!("📞 Network2 dialing Network1..."),
+        Err(e) => {
+            eprintln!("❌ Network2 failed to dial: {:?}", e);
+        }
+    }
     //
-    // //Start listening on network1
-    // // network1
-    // //     .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
-    // //     .unwrap();
-    //
-    // println!("💈 Network1 is listening on /ip4/0.0.0.0/tcp/8080\n");
-    //
-    // // Give some time for network1 to start before dialing
-    // sleep(Duration::from_secs(2)).await;
-    //
-    // // Network2 dials network1
-    // match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
-    //     Ok(_) => println!("📞 Network2 dialing Network1..."),
-    //     Err(e) => {
-    //         eprintln!("❌ Network2 failed to dial: {:?}", e);
-    //     }
-    // }
-    // //
-    // // Process events concurrently for both networks
-    // loop {
-    //     tokio::select! {
-    //         // event = network1.next() => {
-    //         //     if let Some(event) = event {
-    //         //         println!("🌐 Network1 Event: {:?}\n", event);
-    //         //     }
-    //         // }
-    //         event = network2.next() => {
-    //             if let Some(event) = event {
-    //                 println!("📡 Network2 Event: {:?}\n", event);
-    //             }
-    //         }
-    //     }
-    // }
+    // Process events concurrently for both networks
+    loop {
+        tokio::select! {
+            // event = network1.next() => {
+            //     if let Some(event) = event {
+            //         println!("🌐 Network1 Event: {:?}\n", event);
+            //     }
+            // }
+            event = network2.next() => {
+                if let Some(event) = event {
+                    println!("📡 Network2 Event: {:?}\n", event);
+                }
+            }
+        }
+    }
     Ok(())
 }
