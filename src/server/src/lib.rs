@@ -34,10 +34,13 @@ impl Server {
         let cert_chain = load_certificate_chain("certs/server.crt")?;
 
         // Build the server configuration
-        let server_crypto = ServerConfig::builder()
+        let mut server_crypto = ServerConfig::builder()
             .with_no_client_auth()
             .with_single_cert(cert_chain, key_der)
             .expect("Failed to create server config");
+
+        // Enable ALPN for HTTP/3
+        server_crypto.alpn_protocols = vec![b"h3".to_vec()];
 
         // Print the server configuration for debugging
         println!(
@@ -50,7 +53,7 @@ impl Server {
         let server_config =
             quinn::ServerConfig::with_crypto(Arc::new(QuicServerConfig::try_from(server_crypto)?));
 
-        let server = Endpoint::server(server_config, "127.0.0.1:5050".parse().unwrap()).unwrap();
+        let server = Endpoint::server(server_config, "0.0.0.0:5050".parse().unwrap()).unwrap();
         println!("Server is running on 127.0.0.1:5050");
 
         // Accept incoming connections
@@ -129,7 +132,7 @@ async fn handle_http3_connection(connection: quinn::Connection) {
             .unwrap();
 
     // Accept incoming HTTP/3 requests
-    while let Ok(Some((request, stream))) = h3_conn.accept().await {
+    while let Ok(Some((request, mut stream))) = h3_conn.accept().await {
         // Spawn a new task to handle the request
         tokio::spawn(async move {
             eprintln!("Failed to handle HTTP/3 request: {:?}", request);
