@@ -2378,6 +2378,7 @@ version = "0.1.0"
 dependencies = [
  "libp2p",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

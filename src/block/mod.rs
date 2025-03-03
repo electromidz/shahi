@@ -1,6 +1,7 @@
 use chrono::prelude::*;
 use sha2::{Digest, Sha256};
 use std::fmt;
+use tracing::info;
 
 use crate::transaction::Transaction;
 
@@ -59,7 +60,7 @@ impl Block {
                 self.nonce,
             );
         }
-        println!("Block mined: {}", self.hash);
+        info!("Block mined: {}", self.hash);
     }
 }
 

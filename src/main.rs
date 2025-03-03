@@ -16,6 +16,8 @@ pub mod blockchain;
 pub mod contracts;
 pub mod mempool;
 pub mod transaction;
+mod account;
+mod db;
 
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::Secp256k1;

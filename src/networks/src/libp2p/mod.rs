@@ -1,6 +1,8 @@
 pub use libp2p::swarm::dummy::Behaviour as DummyBehaviour;
 use libp2p::{futures::StreamExt, noise, ping, swarm::Swarm, tcp, yamux, Multiaddr, SwarmBuilder};
 use std::{error::Error, time::Duration};
+use tracing::info;
+
 
 #[warn(dead_code)]
 pub struct Libp2pNetwork {
@@ -39,7 +41,7 @@ impl Libp2pNetwork {
 
     pub async fn run(&mut self) {
         while let Some(event) = self.swarm.next().await {
-            println!("Swarm event: {:?}", event);
+            info!("Swarm event: {:?}", event);
         }
     }
 
@@ -47,7 +49,7 @@ impl Libp2pNetwork {
     pub fn listen(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
         let addr: Multiaddr = address.parse()?;
         self.swarm.listen_on(addr)?;
-        println!("Listening on {}", address);
+        info!("Listening on {}", address);
         Ok(())
     }
 
@@ -55,7 +57,7 @@ impl Libp2pNetwork {
     pub fn dial(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
         let addr: Multiaddr = address.parse()?;
         self.swarm.dial(addr)?;
-        println!("Dialing {}", address);
+        info!("Dialing {}", address);
         Ok(())
     }
 }
