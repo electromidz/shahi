@@ -1,3 +1,4 @@
+use bytes::Buf;
 use quinn::rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 use rustls::ServerConfig;
 mod auth;
@@ -17,6 +18,7 @@ use h3::server::Connection as H3Connection;
 use h3::server::RequestStream;
 use h3_quinn::BidiStream;
 use h3_quinn::Connection as H3QuinnConnection;
+use tracing::{error, info, warn};
 
 use http::{Response, StatusCode};
 
@@ -42,11 +44,12 @@ impl Server {
         // Enable ALPN for HTTP/3
         server_crypto.alpn_protocols = vec![b"h3".to_vec()];
 
+        //FIXME: if you want ot see he config on server just enbale info
         // Print the server configuration for debugging
-        println!(
-            "Server configuration created successfully: {:?}\n",
-            server_crypto
-        );
+        // info!(
+        //     "Server configuration created successfully: \n{:?}\n",
+        //     server_crypto
+        // );
 
         // Start your server logic here
         // For example, you can use `server_config` with Quinn or another library.
@@ -54,7 +57,7 @@ impl Server {
             quinn::ServerConfig::with_crypto(Arc::new(QuicServerConfig::try_from(server_crypto)?));
 
         let server = Endpoint::server(server_config, "0.0.0.0:8080".parse().unwrap()).unwrap();
-        println!("Server is running on 127.0.0.1:5050");
+        info!("Server is running on {:?}", server.local_addr());
 
         // Accept incoming connections
         while let Some(connecting) = server.accept().await {
@@ -62,14 +65,12 @@ impl Server {
             task::spawn(async move {
                 match connecting.await {
                     Ok(connection) => {
-                        println!("New connection: {:?}\n", connection.remote_address());
+                        info!("New connection: {:?}", connection.remote_address());
                         //println!("{:?}  - {:?}\n", connection.stats(), connection.rtt());
-
-                        // Handle the connection asynchronously
                         handle_http3_connection(connection).await;
                     }
                     Err(e) => {
-                        eprintln!("Failed to establish connection: {:?}", e);
+                        error!("Failed to establish connection: {:?}", e);
                     }
                 }
             });
@@ -116,14 +117,6 @@ fn load_certificate_chain(path: &str) -> Result<Vec<CertificateDer>, Box<dyn Err
     Ok(certs)
 }
 
-// // Function to handle the connection asynchronously
-// async fn handle_connection(connection: quinn::Connection) {
-//     // Your logic to handle the connection goes here
-//     println!(
-//         "Handling connection from: {:?}",
-//         connection.remote_address()
-//     );
-// }
 async fn handle_http3_connection(connection: quinn::Connection) {
     // Wrap the QUIC connection in an HTTP/3 connection
     let mut h3_conn: H3Connection<H3QuinnConnection, Bytes> =
@@ -135,9 +128,9 @@ async fn handle_http3_connection(connection: quinn::Connection) {
     while let Ok(Some((request, mut stream))) = h3_conn.accept().await {
         // Spawn a new task to handle the request
         tokio::spawn(async move {
-            eprintln!("Failed to handle HTTP/3 request: {:?}", request);
+            error!("Failed to handle HTTP/3 request: {:?}", request);
             if let Err(e) = handle_http3_request(request, stream).await {
-                eprintln!("Failed to handle HTTP/3 request: {:?}", e);
+                error!("Failed to handle HTTP/3 request: {:?}", e);
             }
         });
     }
@@ -150,7 +143,34 @@ async fn handle_http3_request(
     // Match the request path and method
     match (request.uri().path(), request.method()) {
         ("/login", &http::Method::GET) => {
+            warn!("REQUEST{:?}", request);
             // Create a JSON response for the /login route
+            let response = Response::builder()
+                .status(StatusCode::OK)
+                .header("Content-Type", "application/json")
+                .body(())?;
+
+            // Send the response headers
+            stream.send_response(response).await?;
+
+            // Send the response body
+            stream
+                .send_data(Bytes::from(r#"{"message": true}"#))
+                .await?;
+        }
+        ("/register", &http::Method::POST) => {
+            let mut body = Vec::new();
+
+            // Read the request body data
+            while let Some(chunk) = stream.recv_data().await? {
+                body.extend_from_slice(&chunk.chunk());
+            }
+
+            // Convert body to a string (assuming JSON)
+            let body_str = String::from_utf8(body)?;
+
+            warn!("Received POST body: {}", body_str);
+            // Create a JSON response for the /register route
             let response = Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-Type", "application/json")
