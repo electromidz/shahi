@@ -53,7 +53,7 @@ impl Server {
         let server_config =
             quinn::ServerConfig::with_crypto(Arc::new(QuicServerConfig::try_from(server_crypto)?));
 
-        let server = Endpoint::server(server_config, "0.0.0.0:5050".parse().unwrap()).unwrap();
+        let server = Endpoint::server(server_config, "0.0.0.0:8080".parse().unwrap()).unwrap();
         println!("Server is running on 127.0.0.1:5050");
 
         // Accept incoming connections

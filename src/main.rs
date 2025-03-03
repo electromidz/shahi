@@ -8,6 +8,7 @@ use server::Server;
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
+use tracing::{error, info};
 use transaction::Transaction;
 // modules
 pub mod block;
@@ -27,31 +28,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //Start the server in the background
     let server_handle = tokio::spawn(async {
         if let Err(e) = Server::start_server().await {
-            eprintln!("Server error: {:?}", e);
+            error!("Server error: {:?}", e);
         }
     });
 
     //Main program continues executing other tasks
-    println!("Server is running in the background...");
+    info!("Server is running in the background...");
 
     // Simulate other work in the main program
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    println!("Main program is doing other work...");
+    info!("Main program is doing other work...");
 
     // Use `tokio::select!` to run both tasks concurrently
     tokio::select! {
         // Wait for the server task to finish (optional)
         _ = server_handle => {
-            println!("Server task finished.");
+            info!("Server task finished.");
         }
         // Simulate other work in the main program
         _ = async {
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-            println!("Main program is doing other work...");
+            info!("Main program is doing other work...");
 
             // Simulate more work
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-            println!("Main program finished its work.");
+            info!("Main program finished its work.");
         } => {}
     }
 
@@ -69,10 +70,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let transaction = Transaction::new(sender, receiver, amount, payload, &secret_key);
 
     if transaction.verify_signature() {
-        println!("✅ Transaction is valid. Adding to mempool...");
+        info!("✅ Transaction is valid. Adding to mempool...");
         mempool.add_transaction(transaction.clone());
     } else {
-        println!("❌ Transaction verification failed.");
+        info!("❌ Transaction verification failed.");
         return Ok(());
     }
 
@@ -87,14 +88,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             mempool.remove_transaction(&tx);
         }
     } else {
-        println!("⚠️ No transactions available for the new block.");
+        info!("⚠️ No transactions available for the new block.");
     }
 
     // Print the current blockchain state
-    println!("📌 Blockchain State:\n{:?}", blockchain);
+    info!("📌 Blockchain State:\n{:?}", blockchain);
 
     // Print the current mempool state
-    println!("📌 Mempool State:\n{:?}", mempool.get_transactions());
+    info!("📌 Mempool State:\n{:?}", mempool.get_transactions());
 
     //server run
 
@@ -109,7 +110,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //     .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
     //     .unwrap();
 
-    println!("💈 Network1 is listening on /ip4/193.151.152.51/tcp/8080\n");
+    info!("💈 Network1 is listening on /ip4/193.151.152.51/tcp/8080\n");
 
     // Give some time for network1 to start before dialing
     sleep(Duration::from_secs(2)).await;
@@ -117,9 +118,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Network2 dials network1
     //match network2.dial("/ip4/193.151.152.51/tcp/8080".parse::<Multiaddr>().unwrap()) {
     match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
-        Ok(_) => println!("📞 Network2 dialing Network1..."),
+        Ok(_) => info!("📞 Network2 dialing Network1..."),
         Err(e) => {
-            eprintln!("❌ Network2 failed to dial: {:?}", e);
+            error!("❌ Network2 failed to dial: {:?}", e);
         }
     }
     //
@@ -133,7 +134,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // }
             event = network2.next() => {
                 if let Some(event) = event {
-                    println!("📡 Network2 Event: {:?}\n", event);
+                    info!("📡 Network2 Event: {:?}\n", event);
                 }
             }
         }
