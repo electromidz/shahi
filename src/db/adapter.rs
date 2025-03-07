@@ -1,4 +1,4 @@
-use rocksdb::{DB, Options};
+use rocksdb::{Options, DB};
 
 pub struct RocksDBAdapter {
     db: DB,
