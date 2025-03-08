@@ -1,5 +1,5 @@
 use rocksdb::{DB, Options};
-mod port;
+pub mod port;
 
 use port::BlockchainDB;
 

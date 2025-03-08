@@ -1,18 +1,25 @@
-use blockchain::Blockchain;
-
 use libp2p::futures::StreamExt;
 use libp2p::Multiaddr;
-use mempool::Mempool;
 use networks::Network;
 use server::Server;
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info};
-use transaction::Transaction;
 
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::Secp256k1;
+
+mod account;
+pub mod block;
+pub mod blockchain;
+pub mod contracts;
+pub mod mempool;
+pub mod transaction;
+
+use blockchain::Blockchain;
+use mempool::Mempool;
+use transaction::Transaction;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

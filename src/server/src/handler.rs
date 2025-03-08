@@ -1,4 +1,5 @@
 use bytes::{Buf, Bytes};
+use db::port::BlockchainDB;
 use db::RocksDBAdapter;
 use h3::server::Connection as H3Connection;
 use h3::server::RequestStream;
@@ -6,6 +7,7 @@ use h3_quinn::BidiStream;
 use h3_quinn::Connection as H3QuinnConnection;
 use http::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::{error, warn};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -14,19 +16,54 @@ struct UserRegistration {
     public_key: Vec<u8>,
 }
 
+// pub async fn handle_http3_connection(connection: quinn::Connection) {
+//     // Wrap the QUIC connection in an HTTP/3 connection
+//     let mut h3_conn: H3Connection<H3QuinnConnection, Bytes> =
+//         H3Connection::new(H3QuinnConnection::new(connection))
+//             .await
+//             .unwrap();
+//     let db = Arc::new(Mutex::new(
+//         RocksDBAdapter::new("/home/o/Music/db").map_err(|e| {
+//             error!("Database initialization failed: {:?}", e);
+//             e
+//         })?,
+//     ));
+//     let rocksdb_adapter: Arc<dyn BlockchainDB> =
+//         Arc::new(RocksDBAdapter::new("/home/o/Music/db").expect("Failed to create DB!"));
+//
+//     let db_clone = Arc::clone(&rocksdb_adapter);
+//     // Accept incoming HTTP/3 requests
+//     while let Ok(Some((request, mut stream))) = h3_conn.accept().await {
+//         // Spawn a new task to handle the request
+//         tokio::spawn(async move {
+//             error!("Failed to handle HTTP/3 request: {:?}", request);
+//             if let Err(e) = handle_http3_request(request, stream, db_clone).await {
+//                 error!("Failed to handle HTTP/3 request: {:?}", e);
+//             }
+//         });
+//     }
+// }
+
 pub async fn handle_http3_connection(connection: quinn::Connection) {
     // Wrap the QUIC connection in an HTTP/3 connection
-    let mut h3_conn: H3Connection<H3QuinnConnection, Bytes> =
-        H3Connection::new(H3QuinnConnection::new(connection))
-            .await
-            .unwrap();
+    let mut h3_conn = match H3Connection::new(H3QuinnConnection::new(connection)).await {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("Failed to establish HTTP/3 connection: {:?}", e);
+            return;
+        }
+    };
+
+    let rocksdb_adapter: Arc<dyn BlockchainDB> =
+        Arc::new(RocksDBAdapter::new("/home/o/Music/db").expect("Failed to create DB!"));
 
     // Accept incoming HTTP/3 requests
-    while let Ok(Some((request, mut stream))) = h3_conn.accept().await {
+    while let Ok(Some((request, stream))) = h3_conn.accept().await {
+        let db_clone = Arc::clone(&rocksdb_adapter); // Clone inside the loop
+
         // Spawn a new task to handle the request
         tokio::spawn(async move {
-            error!("Failed to handle HTTP/3 request: {:?}", request);
-            if let Err(e) = handle_http3_request(request, stream).await {
+            if let Err(e) = handle_http3_request(request, stream, db_clone).await {
                 error!("Failed to handle HTTP/3 request: {:?}", e);
             }
         });
@@ -36,6 +73,7 @@ pub async fn handle_http3_connection(connection: quinn::Connection) {
 pub async fn handle_http3_request(
     request: http::Request<()>,
     mut stream: RequestStream<BidiStream<Bytes>, Bytes>, // Use h3_quinn::BidiStream
+    db: Arc<dyn BlockchainDB>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Match the request path and method
     match (request.uri().path(), request.method()) {
@@ -78,8 +116,7 @@ pub async fn handle_http3_request(
                 }
             };
 
-            let rocksdb_adapter =
-                RocksDBAdapter::new("/home/o/Music/db").expect("Failed to created DB!");
+            db.create_account(user.address, user.public_key);
 
             warn!("Received POST body: {}", body_str);
             // Create a JSON response for the /register route
@@ -109,6 +146,17 @@ pub async fn handle_http3_request(
     stream.finish().await?;
 
     Ok(())
+}
+
+// Read request body
+async fn receive_body(
+    stream: &mut RequestStream<BidiStream<Bytes>, Bytes>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let mut body = Vec::new();
+    while let Some(chunk) = stream.recv_data().await? {
+        body.extend_from_slice(&chunk.chunk());
+    }
+    String::from_utf8(body).map_err(|e| e.into())
 }
 
 // Helper function to send JSON responses
