@@ -10,34 +10,12 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info};
 use transaction::Transaction;
-// modules
-pub mod block;
-pub mod blockchain;
-pub mod contracts;
-pub mod mempool;
-pub mod transaction;
-mod account;
-mod db;
 
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::Secp256k1;
-use rocksdb::{Options, DB};
-use std::path::Path;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let path = Path::new("/home/o/Music/db/rocksdb");  // Update the path
-    use rocksdb::{DB, Options};
-    {
-        let db = DB::open_default(path).unwrap();
-        db.put(b"my key", b"my value").unwrap();
-        match db.get(b"my key") {
-            Ok(Some(value)) => println!("retrieved value {}", String::from_utf8(value).unwrap()),
-            Ok(None) => println!("value not found"),
-            Err(e) => println!("operational problem encountered: {}", e),
-        }
-        db.delete(b"my key").unwrap();
-    }
-    let _ = DB::destroy(&Options::default(), path);
     println!("🦀");
     // Initialize logging
     tracing_subscriber::fmt::init();

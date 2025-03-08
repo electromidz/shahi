@@ -1,10 +1,18 @@
-use bytes::{Bytes, Buf};
+use bytes::{Buf, Bytes};
+use db::RocksDBAdapter;
+use h3::server::Connection as H3Connection;
 use h3::server::RequestStream;
 use h3_quinn::BidiStream;
-use http::{Response, StatusCode};
-use tracing::{error, warn};
-use h3::server::Connection as H3Connection;
 use h3_quinn::Connection as H3QuinnConnection;
+use http::{Response, StatusCode};
+use serde::{Deserialize, Serialize};
+use tracing::{error, warn};
+
+#[derive(Serialize, Deserialize, Debug)]
+struct UserRegistration {
+    address: String,
+    public_key: Vec<u8>,
+}
 
 pub async fn handle_http3_connection(connection: quinn::Connection) {
     // Wrap the QUIC connection in an HTTP/3 connection
@@ -58,6 +66,21 @@ pub async fn handle_http3_request(
             // Convert body to a string (assuming JSON)
             let body_str = String::from_utf8(body)?;
 
+            let user: UserRegistration = match serde_json::from_str(&body_str) {
+                Ok(user) => user,
+                Err(_) => {
+                    return send_json_response(
+                        &mut stream,
+                        StatusCode::BAD_REQUEST,
+                        r#"{"error": "Invalid JSON"}"#,
+                    )
+                    .await;
+                }
+            };
+
+            let rocksdb_adapter =
+                RocksDBAdapter::new("/home/o/Music/db").expect("Failed to created DB!");
+
             warn!("Received POST body: {}", body_str);
             // Create a JSON response for the /register route
             let response = Response::builder()
@@ -84,6 +107,25 @@ pub async fn handle_http3_request(
 
     // Finish the stream
     stream.finish().await?;
+
+    Ok(())
+}
+
+// Helper function to send JSON responses
+async fn send_json_response(
+    stream: &mut RequestStream<BidiStream<Bytes>, Bytes>,
+    status: StatusCode,
+    body: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let response = Response::builder()
+        .status(status)
+        .header("Content-Type", "application/json")
+        .body(())?;
+
+    stream.send_response(response).await?;
+    stream
+        .send_data(Bytes::from(r#"{"error": "Invalid JSON"}"#))
+        .await?;
 
     Ok(())
 }

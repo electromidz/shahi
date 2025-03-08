@@ -1,31 +1,20 @@
-use bytes::Buf;
-use quinn::rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 use rustls::ServerConfig;
 mod auth;
+mod handler;
 mod route;
 mod utils;
-mod handler;
 
 use h3_quinn::quinn::Endpoint;
 use quinn::crypto::rustls::QuicServerConfig;
 use quinn::rustls;
-use rustls_pemfile::{certs, pkcs8_private_keys};
 use std::error::Error;
-use std::fs::File;
-use std::io::BufReader;
 use std::sync::Arc;
 use tokio::task;
 
-use bytes::Bytes;
-use h3::server::Connection as H3Connection;
-use h3::server::RequestStream;
-use h3_quinn::BidiStream;
-use h3_quinn::Connection as H3QuinnConnection;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
-use http::{Response, StatusCode};
+use handler::handle_http3_connection;
 use utils::{load_certificate_chain, load_private_key};
-use handler::{handle_http3_connection, handle_http3_request};
 
 pub struct Server;
 
@@ -83,5 +72,3 @@ impl Server {
         Ok(())
     }
 }
-
-

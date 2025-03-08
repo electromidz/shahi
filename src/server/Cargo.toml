@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-
-#serde = "1.0.217"axum = "0.8.1"
 axum = "0.8.1"
 clap = "4.5.29"
 h3 = "0.0.6"
@@ -24,3 +22,5 @@ tracing = "0.1.41"
 rcgen = "0.13.2"
 bytes = "1.10.0"
 http = "1.2.0"
+
+db = { path = "../db" }
