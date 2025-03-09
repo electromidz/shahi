@@ -16,33 +16,10 @@ struct UserRegistration {
     public_key: Vec<u8>,
 }
 
-// pub async fn handle_http3_connection(connection: quinn::Connection) {
-//     // Wrap the QUIC connection in an HTTP/3 connection
-//     let mut h3_conn: H3Connection<H3QuinnConnection, Bytes> =
-//         H3Connection::new(H3QuinnConnection::new(connection))
-//             .await
-//             .unwrap();
-//     let db = Arc::new(Mutex::new(
-//         RocksDBAdapter::new("/home/o/Music/db").map_err(|e| {
-//             error!("Database initialization failed: {:?}", e);
-//             e
-//         })?,
-//     ));
-//     let rocksdb_adapter: Arc<dyn BlockchainDB> =
-//         Arc::new(RocksDBAdapter::new("/home/o/Music/db").expect("Failed to create DB!"));
-//
-//     let db_clone = Arc::clone(&rocksdb_adapter);
-//     // Accept incoming HTTP/3 requests
-//     while let Ok(Some((request, mut stream))) = h3_conn.accept().await {
-//         // Spawn a new task to handle the request
-//         tokio::spawn(async move {
-//             error!("Failed to handle HTTP/3 request: {:?}", request);
-//             if let Err(e) = handle_http3_request(request, stream, db_clone).await {
-//                 error!("Failed to handle HTTP/3 request: {:?}", e);
-//             }
-//         });
-//     }
-// }
+#[derive(Serialize, Deserialize, Debug)]
+struct UserAddress {
+    address: String,
+}
 
 pub async fn handle_http3_connection(connection: quinn::Connection) {
     // Wrap the QUIC connection in an HTTP/3 connection
@@ -133,6 +110,47 @@ pub async fn handle_http3_request(
                 .send_data(Bytes::from(r#"{"message": true}"#))
                 .await?;
         }
+        ("/getAddress", &http::Method::POST) => {
+            let mut body = Vec::new();
+
+            // Read the request body data
+            while let Some(chunk) = stream.recv_data().await? {
+                body.extend_from_slice(&chunk.chunk());
+            }
+
+            // Convert body to a string (assuming JSON)
+            let body_str = String::from_utf8(body)?;
+
+            let address: UserAddress = match serde_json::from_str(&body_str) {
+                Ok(addr) => addr,
+                Err(_) => {
+                    return send_json_response(
+                        &mut stream,
+                        StatusCode::BAD_REQUEST,
+                        r#"{"error": "Invalid JSON"}"#,
+                    )
+                    .await;
+                }
+            };
+
+            db.get_account(address.address);
+
+            warn!("Received POST body: {}", body_str);
+            // Create a JSON response for the /register route
+            let response = Response::builder()
+                .status(StatusCode::OK)
+                .header("Content-Type", "application/json")
+                .body(())?;
+
+            // Send the response headers
+            stream.send_response(response).await?;
+
+            // Send the response body
+            stream
+                .send_data(Bytes::from(r#"{"message": true}"#))
+                .await?;
+        }
+
         _ => {
             // Return a 404 Not Found response for unknown routes
             let response = Response::builder().status(StatusCode::NOT_FOUND).body(())?;

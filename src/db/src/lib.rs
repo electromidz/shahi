@@ -26,4 +26,18 @@ impl BlockchainDB for RocksDBAdapter {
             Err(e) => eprintln!("Failed to create account {}: {:?}", address, e),
         }
     }
+
+    fn get_account(&self, address: String) {
+        let key = format!("account:{}", address);
+
+        match self.db.get(key.as_bytes()) {
+            Ok(Some(value)) => {
+                let decoded =
+                    String::from_utf8(value).unwrap_or_else(|_| "Invalid UTF-8".to_string());
+                println!("Account {}: {}", address, decoded);
+            }
+            Ok(None) => println!("Account {} not found.", address),
+            Err(e) => eprintln!("Failed to retrieve account {}: {:?}", address, e),
+        }
+    }
 }
