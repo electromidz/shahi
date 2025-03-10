@@ -1,12 +1,25 @@
 pub use libp2p::swarm::dummy::Behaviour as DummyBehaviour;
-use libp2p::{futures::StreamExt, noise, ping, swarm::Swarm, tcp, yamux, Multiaddr, SwarmBuilder};
+use libp2p::swarm::NetworkBehaviour;
+use libp2p::{
+    futures::{io, StreamExt},
+    gossipsub, mdns, noise, ping, quic,
+    swarm::Swarm,
+    tcp, yamux, Multiaddr, SwarmBuilder,
+};
+
 use std::{error::Error, time::Duration};
 use tracing::info;
-
 
 #[warn(dead_code)]
 pub struct Libp2pNetwork {
     swarm: Swarm<ping::Behaviour>,
+}
+
+// We create a custom network behaviour that combines Gossipsub and Mdns.
+#[derive(NetworkBehaviour)]
+struct MyBehaviour {
+    gossipsub: gossipsub::Behaviour,
+    mdns: mdns::tokio::Behaviour,
 }
 
 #[warn(dead_code)]
@@ -35,6 +48,33 @@ impl Libp2pNetwork {
             .with_tcp(tcp_config, security_upgrade, multiplexer_upgrade)
             .unwrap()
             .with_behaviour(|_| DummyBehaviour)
+            .unwrap()
+            .build()
+    }
+
+    pub async fn create_gossip() -> Swarm<MyBehaviour> {
+        let tcp_config = tcp::Config::default();
+        let security_upgrade = noise::Config::new;
+        let multiplexer_upgrade = yamux::Config::default;
+        let gossipsub_config = gossipsub::ConfigBuilder::default()
+            .heartbeat_interval(Duration::from_secs(10))
+            .validation_mode(gossipsub::ValidationMode::Strict)
+            .build()
+            .map_err(|msg| io::Error::new(io::ErrorKind::Other, msg));
+
+        SwarmBuilder::with_new_identity()
+            .with_tokio()
+            .with_tcp(tcp_config, security_upgrade, multiplexer_upgrade)
+            .unwrap()
+            .with_behaviour(|key| {
+                let gossipsub = gossipsub::Behaviour::new(
+                    gossipsub::MessageAuthenticity::Signed((key.clone())),
+                    gossipsub_config,
+                );
+                let mdns =
+                    mdns::tokio::Behaviour::new(mdns::Config::default(), key.public().to_peer_id());
+                Ok(MyBehaviour { gossipsub, mdns })
+            })
             .unwrap()
             .build()
     }

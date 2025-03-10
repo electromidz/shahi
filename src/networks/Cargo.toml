@@ -11,6 +11,9 @@ libp2p = { version = "^0.55.0", features = [
   "tokio",
   "yamux",
   "dns",
+  "gossipsub",
+  "mdns",
+  "quic",
 ] }
 
 tokio = { version = "1.43.0", features = ["full"] }
