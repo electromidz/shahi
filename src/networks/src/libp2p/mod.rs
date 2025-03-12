@@ -2,7 +2,7 @@ pub use libp2p::swarm::dummy::Behaviour as DummyBehaviour;
 use libp2p::{
     futures::{io, StreamExt},
     gossipsub, mdns, noise, ping, quic,
-    swarm::{self, Swarm},
+    swarm::{self, NetworkBehaviour, Swarm},
     tcp, yamux, Multiaddr, SwarmBuilder,
 };
 
@@ -10,7 +10,6 @@ use std::{
     collections::hash_map::DefaultHasher,
     error::Error,
     hash::{Hash, Hasher},
-    io::ErrorKind,
     time::Duration,
 };
 use tracing::info;
@@ -21,7 +20,12 @@ pub struct Libp2pNetwork {
 }
 
 // We create a custom network behaviour that combines Gossipsub and Mdns.
-struct MyBehaviour {
+//#[derive(NetworkBehaviour)]
+pub struct MyBehaviour {
+    swarm: Swarm<gossipsub::Behaviour>,
+}
+
+pub struct GossipsubBehaviour {
     gossipsub: gossipsub::Behaviour,
     mdns: mdns::tokio::Behaviour,
 }
@@ -56,9 +60,32 @@ impl Libp2pNetwork {
             .build()
     }
 
-    pub async fn create_gossip(
-    ) -> Result<Swarm<MyBehaviour>, Box<dyn gossipsub::ConfigBuilderError>> {
-        let mut swarm = libp2p::SwarmBuilder::with_new_identity()
+    pub async fn run(&mut self) {
+        while let Some(event) = self.swarm.next().await {
+            info!("Swarm event: {:?}", event);
+        }
+    }
+
+    /// Start listening on a given address
+    pub fn listen(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
+        let addr: Multiaddr = address.parse()?;
+        self.swarm.listen_on(addr)?;
+        info!("Listening on {}", address);
+        Ok(())
+    }
+
+    /// Dial a given address
+    pub fn dial(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
+        let addr: Multiaddr = address.parse()?;
+        self.swarm.dial(addr)?;
+        info!("Dialing {}", address);
+        Ok(())
+    }
+}
+
+impl MyBehaviour {
+    pub async fn new() -> Result<Self, Box<dyn Error>> {
+        libp2p::SwarmBuilder::with_new_identity()
             .with_tokio()
             .with_tcp(
                 tcp::Config::default(),
@@ -81,44 +108,61 @@ impl Libp2pNetwork {
                     // signing)
                     .message_id_fn(message_id_fn) // content-address messages. No two messages of the same content will be propagated.
                     .build()
-                    .map_err(|msg| std::io::Error::new(io::ErrorKind::Other, msg))?; // Temporary hack because `build` does not return a proper `std::error::Error`.
+                    .map_err(|msg| io::Error::new(io::ErrorKind::Other, msg)); // Temporary hack because `build` does not return a proper `std::error::Error`.
 
                 // build a gossipsub network behaviour
                 let gossipsub = gossipsub::Behaviour::new(
                     gossipsub::MessageAuthenticity::Signed(key.clone()),
                     gossipsub_config,
-                )?;
+                )
+                .expect("Faild msg");
 
-                let mdns = mdns::tokio::Behaviour::new(
-                    mdns::Config::default(),
-                    key.public().to_peer_id(),
-                )?;
-                Ok(MyBehaviour { gossipsub, mdns })
-            })?
-            .build();
+                let mdns =
+                    mdns::tokio::Behaviour::new(mdns::Config::default(), key.public().to_peer_id())
+                        .expect("Failed");
+                GossipsubBehaviour { gossipsub, mdns };
+            })
+            .expect("Error to keypair")
+            .build()
     }
-
-    pub async fn run(&mut self) {
-        while let Some(event) = self.swarm.next().await {
-            info!("Swarm event: {:?}", event);
-        }
-    }
-
-    /// Start listening on a given address
-    pub fn listen(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
-        let addr: Multiaddr = address.parse()?;
-        self.swarm.listen_on(addr)?;
-        info!("Listening on {}", address);
-        Ok(())
-    }
-
-    /// Dial a given address
-    pub fn dial(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
-        let addr: Multiaddr = address.parse()?;
-        self.swarm.dial(addr)?;
-        info!("Dialing {}", address);
-        Ok(())
-    }
+    // pub async fn create_gossip() -> Result<Self, Box<dyn Error>> {
+    //     libp2p::SwarmBuilder::with_new_identity()
+    //         .with_tokio()
+    //         .with_tcp(
+    //             tcp::Config::default(),
+    //             noise::Config::new,
+    //             yamux::Config::default,
+    //         )?
+    //         .with_quic()
+    //         .with_behaviour(|key| {
+    //             let message_id_fn = |message: &gossipsub::Message| {
+    //                 let mut s = DefaultHasher::new();
+    //                 message.data.hash(&mut s);
+    //                 gossipsub::MessageId::from(s.finish().to_string())
+    //             };
+    //
+    //             // Set a custom gossipsub configuration
+    //             let gossipsub_config = gossipsub::ConfigBuilder::default()
+    //                 .heartbeat_interval(Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
+    //                 .validation_mode(gossipsub::ValidationMode::Strict) // This sets the kind of message validation. The default is Strict (enforce message
+    //                 // signing)
+    //                 .message_id_fn(message_id_fn) // content-address messages. No two messages of the same content will be propagated.
+    //                 .build()
+    //                 .map_err(|msg| io::Error::new(io::ErrorKind::Other, msg))?; // Temporary hack because `build` does not return a proper `std::error::Error`.
+    //
+    //             // build a gossipsub network behaviour
+    //             let gossipsub = gossipsub::Behaviour::new(
+    //                 gossipsub::MessageAuthenticity::Signed(key.clone()),
+    //                 gossipsub_config,
+    //             )?;
+    //
+    //             let mdns = mdns::tokio::Behaviour::new(
+    //                 mdns::Config::default(),
+    //                 key.public().to_peer_id(),
+    //             )?;
+    //             Ok(MyBehaviour { gossipsub, mdns })
+    //         });
+    // }
 }
 
 #[test]
