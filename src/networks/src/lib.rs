@@ -14,5 +14,5 @@ impl Network {
     pub async fn create() -> Swarm<DummyBehaviour> {
         Libp2pNetwork::create_swarm().await
     }
-    pub async fn create_gossip() -> Swarm {}
+    //pub async fn create_gossip() -> Swarm {}
 }
