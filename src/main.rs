@@ -106,6 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // }
     //let mut network1 = Network::create().await;
     let mut network2 = Network::create().await;
+    let mut chat1 = Network::create_gossip().await;
 
     //Start listening on network1
     // network1
