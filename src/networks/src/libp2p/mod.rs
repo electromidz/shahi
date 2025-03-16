@@ -22,7 +22,6 @@ pub struct Libp2pNetwork {
 // We create a custom network behaviour that combines Gossipsub and Mdns.
 #[derive(NetworkBehaviour)]
 pub struct MyBehaviour {
-    gossipsub: gossipsub::Behaviour,
     mdns: mdns::tokio::Behaviour,
 }
 

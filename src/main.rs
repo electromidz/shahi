@@ -1,10 +1,10 @@
 use libp2p::futures::StreamExt;
-use libp2p::Multiaddr;
+use libp2p::{gossipsub, Multiaddr};
 use networks::Network;
 use server::Server;
 use std::error::Error;
 use std::time::Duration;
-use tokio::time::sleep;
+use tokio::{time::sleep , io, io::AsyncBufReadExt};
 use tracing::{error, info};
 
 use secp256k1::rand::rngs::OsRng;
@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // }
     //let mut network1 = Network::create().await;
     let mut network2 = Network::create().await;
-    let mut chat1 = Network::create_gossip().await;
+
 
     //Start listening on network1
     // network1
@@ -117,6 +117,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Give some time for network1 to start before dialing
     sleep(Duration::from_secs(2)).await;
+
+    let topic = gossipsub::IdentTopic::new("test-net");
+    let mut gossip = Network::create_gossip().await?;
+    gossip.behaviour_mut().gossipsub.subscribe(&topic)?;
+
+
+    let mut stdin = io::BufReader::new(io::stdin()).lines();
+
+    // Listen on all interfaces and whatever port the OS assigns
+    gossip.listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse()?)?;
+    gossip.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+
+    info!("Enter messages via STDIN and they will be sent to connected peers using Gossipsub");
+
+
+
 
     // Network2 dials network1
     //match network2.dial("/ip4/193.151.152.51/tcp/8080".parse::<Multiaddr>().unwrap()) {
