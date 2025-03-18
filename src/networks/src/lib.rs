@@ -1,4 +1,4 @@
-mod libp2p;
+pub mod libp2p;
 
 use libp2p::{DummyBehaviour, MyBehaviour};
 

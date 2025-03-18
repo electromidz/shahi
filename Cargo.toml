@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-networks = { path = "./src/networks" }
+networks = { path = "src/networks" }
 server = { path = "./src/server" }
 db = { path = "./src/db" }
 chrono = "0.4.39"

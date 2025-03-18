@@ -1,5 +1,5 @@
 use libp2p::futures::StreamExt;
-use libp2p::{gossipsub, Multiaddr};
+use libp2p::{gossipsub, Multiaddr, swarm::SwarmEvent};
 use networks::Network;
 use server::Server;
 use std::error::Error;
@@ -20,6 +20,17 @@ pub mod transaction;
 use blockchain::Blockchain;
 use mempool::Mempool;
 use transaction::Transaction;
+use gossipsub::Behaviour;
+
+use libp2p::mdns;
+use networks::libp2p::MyBehaviourEvent as GossipEvent;
+
+
+#[derive(Debug)]
+pub enum MyBehaviourEvent {
+    Mdns(mdns::Event),
+    Gossipsub(gossipsub::Event),
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -122,7 +133,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut gossip = Network::create_gossip().await?;
     gossip.behaviour_mut().gossipsub.subscribe(&topic)?;
 
-
     let mut stdin = io::BufReader::new(io::stdin()).lines();
 
     // Listen on all interfaces and whatever port the OS assigns
@@ -155,6 +165,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 if let Some(event) = event {
                     info!("📡 Network2 Event: {:?}\n", event);
                 }
+            }
+            event = gossip.select_next_some() => match event {
+                  SwarmEvent::Behaviour(GossipEvent::Mdns(mdns::Event::Discovered(list))) => {
+                    for (peer_id, _multiaddr) in list {
+                        println!("mDNS discovered a new peer: {peer_id}");
+                        gossip.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                    }
+                },
+                SwarmEvent::Behaviour(GossipEvent::Mdns(mdns::Event::Expired(list))) => {
+                    for (peer_id, _multiaddr) in list {
+                        println!("mDNS discover peer has expired: {peer_id}");
+                        gossip.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
+                    }
+                },
+                SwarmEvent::Behaviour(GossipEvent::Gossipsub(gossipsub::Event::Message {
+                    propagation_source: peer_id,
+                    message_id: id,
+                    message,
+                })) => println!(
+                        "Got message: '{}' with id: {id} from peer: {peer_id}",
+                        String::from_utf8_lossy(&message.data),
+                    ),
+                SwarmEvent::NewListenAddr { address, .. } => {
+                    println!("Local node is listening on {address}");
+                }
+                _ => {}
             }
         }
     }

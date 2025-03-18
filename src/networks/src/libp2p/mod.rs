@@ -22,7 +22,13 @@ pub struct Libp2pNetwork {
 // We create a custom network behaviour that combines Gossipsub and Mdns.
 #[derive(NetworkBehaviour)]
 pub struct MyBehaviour {
-    mdns: mdns::tokio::Behaviour,
+    pub gossipsub: gossipsub::Behaviour,
+    pub mdns: mdns::tokio::Behaviour,
+}
+
+pub enum MyBehaviourEvents {
+    Mdns(mdns::Event),
+    Gossipsub(gossipsub::Event),
 }
 
 impl MyBehaviour {
