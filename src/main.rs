@@ -152,8 +152,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
             error!("❌ Network2 failed to dial: {:?}", e);
         }
     }
+    let mut stdin = io::BufReader::new(io::stdin()).lines();
+
     loop {
         tokio::select! {
+            line = stdin.next_line() => {
+            if let Ok(Some(input)) = line {
+                let message = input.clone();
+                info!("✉️ Sending message: {}", message);
+
+                if let Err(e) = gossip.behaviour_mut().gossipsub.publish(topic.clone(), message.as_bytes()) {
+                    error!("❌ Failed to send message: {:?}", e);
+                } else {
+                    info!("📨 Message sent!");
+                }
+            }
+        }
             // event = network1.next() => {
             //     if let Some(event) = event {
             //         println!("🌐 Network1 Event: {:?}\n", event);
@@ -167,13 +181,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             event = gossip.select_next_some() => match event {
                   SwarmEvent::Behaviour(GossipEvent::Mdns(mdns::Event::Discovered(list))) => {
                     for (peer_id, _multiaddr) in list {
-                        println!("mDNS discovered a new peer: {peer_id}");
+                        info!("mDNS discovered a new peer: {peer_id}");
                         gossip.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                     }
                 },
                 SwarmEvent::Behaviour(GossipEvent::Mdns(mdns::Event::Expired(list))) => {
                     for (peer_id, _multiaddr) in list {
-                        println!("mDNS discover peer has expired: {peer_id}");
+                        info!("mDNS discover peer has expired: {peer_id}");
                         gossip.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
                     }
                 },
@@ -181,12 +195,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     propagation_source: peer_id,
                     message_id: id,
                     message,
-                })) => println!(
-                        "Got message: '{}' with id: {id} from peer: {peer_id}",
+                })) => info!(
+                        "📩 Got message: '{}' with id: {id} from peer: {peer_id}",
                         String::from_utf8_lossy(&message.data),
                     ),
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("Local node is listening on {address}");
+                    info!("Local node is listening on {address}");
                 }
                 _ => {}
             }
