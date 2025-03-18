@@ -152,8 +152,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             error!("❌ Network2 failed to dial: {:?}", e);
         }
     }
-    //
-    // Process events concurrently for both networks
     loop {
         tokio::select! {
             // event = network1.next() => {
