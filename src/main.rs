@@ -1,10 +1,10 @@
 use libp2p::futures::StreamExt;
-use libp2p::{gossipsub, Multiaddr, swarm::SwarmEvent};
+use libp2p::{gossipsub, Multiaddr, swarm::SwarmEvent, Swarm};
 use networks::Network;
 use server::Server;
 use std::error::Error;
 use std::time::Duration;
-use tokio::{time::sleep , io, io::AsyncBufReadExt};
+use tokio::{time::sleep , io, io::AsyncBufReadExt, io::stdin};
 use tracing::{error, info};
 
 use secp256k1::rand::rngs::OsRng;
@@ -23,7 +23,7 @@ use transaction::Transaction;
 use gossipsub::Behaviour;
 
 use libp2p::mdns;
-use networks::libp2p::MyBehaviourEvent as GossipEvent;
+use networks::libp2p::{Libp2pNetwork, MyBehaviourEvent as GossipEvent};
 
 
 #[derive(Debug)]
@@ -91,7 +91,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let transactions = mempool.get_transactions();
-
     // Add transactions to a new block
     if !transactions.is_empty() {
         blockchain.add_block(transactions.clone());
@@ -116,7 +115,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //     eprintln!("have error on init_p_2_p {:?}", e)
     // }
     //let mut network1 = Network::create().await;
-    let mut network2 = Network::create().await;
+    // let mut network2 = Network::create().await;
 
 
     //Start listening on network1
@@ -124,71 +123,69 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //     .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
     //     .unwrap();
 
-    info!("💈 Network1 is listening on /ip4/193.151.152.51/tcp/8080\n");
+    //info!("💈 Network1 is listening on /ip4/193.151.152.51/tcp/8080\n");
 
     // Give some time for network1 to start before dialing
     sleep(Duration::from_secs(2)).await;
-
-    let topic = gossipsub::IdentTopic::new("test-net");
-    let mut gossip = Network::create_gossip().await?;
-    gossip.behaviour_mut().gossipsub.subscribe(&topic)?;
-
-    let mut stdin = io::BufReader::new(io::stdin()).lines();
-
-    // Listen on all interfaces and whatever port the OS assigns
-    gossip.listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse()?)?;
-    gossip.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
-
-    info!("Enter messages via STDIN and they will be sent to connected peers using Gossipsub");
-
-
-
-
-    // Network2 dials network1
-    //match network2.dial("/ip4/193.151.152.51/tcp/8080".parse::<Multiaddr>().unwrap()) {
-    match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
-        Ok(_) => info!("📞 Network2 dialing Network1..."),
-        Err(e) => {
-            error!("❌ Network2 failed to dial: {:?}", e);
+    // match Network::start_gossip().await {
+    //     Ok(_)=> info!("gossip start"),
+    //     Err(e)=> error!("gossip start: {}", e)
+    // }
+    //let mut swarm = Network::create_gossip().await.unwrap();
+    let mut swarm = match Network::create_gossip().await {
+        Ok(mut swarm) => {
+            let topic = gossipsub::IdentTopic::new("test-net");
+            swarm.behaviour_mut().gossipsub.subscribe(&topic).unwrap();
+            swarm
         }
-    }
+        Err(e)=>{error!("❌ Failed to create gossipsub swarm: {:?}", e); return Err(Box::new(e));},
+    };
     let mut stdin = io::BufReader::new(io::stdin()).lines();
+    let topic = gossipsub::IdentTopic::new("test-net");
+
+    let mut net_dial_1 = Network::create().await;
+
+    let dial_addr = "/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap();
+    //Network::dial(&mut net_dial_1, dial_addr).await.unwrap();
+    // ✅ Corrected: Must `await` the function call
+    match Network::dial(&mut net_dial_1, dial_addr).await {
+        Ok(_) => info!("✅ Dial successful"),
+        Err(e) => {
+            error!("❌ Dial error: {:?}", e);
+            return Err(Box::new(e));
+        },
+    }
 
     loop {
         tokio::select! {
-            line = stdin.next_line() => {
-            if let Ok(Some(input)) = line {
-                let message = input.clone();
-                info!("✉️ Sending message: {}", message);
-
-                if let Err(e) = gossip.behaviour_mut().gossipsub.publish(topic.clone(), message.as_bytes()) {
-                    error!("❌ Failed to send message: {:?}", e);
-                } else {
-                    info!("📨 Message sent!");
-                }
-            }
-        }
-            // event = network1.next() => {
-            //     if let Some(event) = event {
-            //         println!("🌐 Network1 Event: {:?}\n", event);
-            //     }
-            // }
-            event = network2.next() => {
+            event = net_dial_1.next() => {
                 if let Some(event) = event {
-                    info!("📡 Network2 Event: {:?}\n", event);
+                    info!("📡 Network1 Event: {:?}", event);
                 }
             }
-            event = gossip.select_next_some() => match event {
+            line = stdin.next_line() => {
+                    if let Ok(Some(input)) = line {
+                        let message = input.clone();
+                        info!("✉️ Sending message: {}", message);
+                        if let Err(e) = swarm.behaviour_mut().gossipsub.publish(topic.clone(), message.as_bytes()) {
+                            error!("❌ Failed to send message: {:?}", e);
+                        } else {
+                            info!("📨 Message sent!");
+                        }
+                    }
+                }
+
+                event = swarm.select_next_some() => match event {
                   SwarmEvent::Behaviour(GossipEvent::Mdns(mdns::Event::Discovered(list))) => {
                     for (peer_id, _multiaddr) in list {
                         info!("mDNS discovered a new peer: {peer_id}");
-                        gossip.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                        swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                     }
                 },
                 SwarmEvent::Behaviour(GossipEvent::Mdns(mdns::Event::Expired(list))) => {
                     for (peer_id, _multiaddr) in list {
                         info!("mDNS discover peer has expired: {peer_id}");
-                        gossip.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
+                        swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
                     }
                 },
                 SwarmEvent::Behaviour(GossipEvent::Gossipsub(gossipsub::Event::Message {
@@ -206,5 +203,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
+
+
+    // Network2 dials network1
+    //match network2.dial("/ip4/193.151.152.51/tcp/8080".parse::<Multiaddr>().unwrap()) {
+    // match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
+    //     Ok(_) => info!("📞 Network2 dialing Network1..."),
+    //     Err(e) => {
+    //         error!("❌ Network2 failed to dial: {:?}", e);
+    //     }
+    // }
+
+    // loop {
+    //     tokio::select! {
+    //         // event = network1.next() => {
+    //         //     if let Some(event) = event {
+    //         //         println!("🌐 Network1 Event: {:?}\n", event);
+    //         //     }
+    //         // }
+    //         event = network2.next() => {
+    //             if let Some(event) = event {
+    //                 info!("📡 Network2 Event: {:?}\n", event);
+    //             }
+    //         }
+    //     }
+    // }
     //Ok(())
 }

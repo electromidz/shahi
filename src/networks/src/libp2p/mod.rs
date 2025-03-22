@@ -1,8 +1,8 @@
 pub use libp2p::swarm::dummy::Behaviour as DummyBehaviour;
-use libp2p::{
-    futures::{io, StreamExt},
+pub use libp2p::{
+    futures::{ StreamExt},
     gossipsub, mdns, noise, ping,
-    swarm::{NetworkBehaviour, Swarm},
+    swarm::{NetworkBehaviour, Swarm, SwarmEvent},
     tcp, yamux, Multiaddr, SwarmBuilder,
 };
 
@@ -12,7 +12,12 @@ use std::{
     hash::{Hash, Hasher},
     time::Duration,
 };
-use tracing::info;
+use libp2p::gossipsub::IdentTopic;
+use tracing::{info, error};
+use tokio::{time::sleep , io, io::AsyncBufReadExt};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
 
 #[warn(dead_code)]
 pub struct Libp2pNetwork {
@@ -32,7 +37,7 @@ pub enum MyBehaviourEvents {
 }
 
 impl MyBehaviour {
-    pub async fn crete_gossip_swap() -> Result<Swarm<MyBehaviour>, Box<dyn Error>> {
+    pub async fn create_gossip_swarm() -> Result<Swarm<MyBehaviour>, Box<dyn Error>> {
         let tcp_config = tcp::Config::default();
         let security_upgrade = noise::Config::new;
         let multiplexer_upgrade = yamux::Config::default;
@@ -71,6 +76,62 @@ impl MyBehaviour {
             .build();
         Ok(swarm)
     }
+
+    pub async fn start_gossip()->Result<(Swarm<MyBehaviour>), Box<dyn Error>> {
+        let topic = gossipsub::IdentTopic::new("test-net");
+        let mut swarm = MyBehaviour::create_gossip_swarm().await?;
+        swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
+        let mut stdin = io::BufReader::new(io::stdin()).lines();
+        // Listen on all interfaces and whatever port the OS assigns
+        swarm.listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse()?)?;
+        swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+        info!("Enter messages via STDIN and they will be sent to connected peers using Gossipsub");
+        Ok(swarm)
+
+    //     loop {
+    //         tokio::select! {
+    //             line = stdin.next_line() => {
+    //                 if let Ok(Some(input)) = line {
+    //                     let message = input.clone();
+    //                     info!("✉️ Sending message: {}", message);
+    //                     if let Err(e) = swarm.behaviour_mut().gossipsub.publish(topic.clone(), message.as_bytes()) {
+    //                         error!("❌ Failed to send message: {:?}", e);
+    //                     } else {
+    //                         info!("📨 Message sent!");
+    //                     }
+    //                 }
+    //             }
+    //
+    //             event = swarm.select_next_some() => match event {
+    //               SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
+    //                 for (peer_id, _multiaddr) in list {
+    //                     info!("mDNS discovered a new peer: {peer_id}");
+    //                     swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+    //                 }
+    //             },
+    //             SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Expired(list))) => {
+    //                 for (peer_id, _multiaddr) in list {
+    //                     info!("mDNS discover peer has expired: {peer_id}");
+    //                     swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
+    //                 }
+    //             },
+    //             SwarmEvent::Behaviour(MyBehaviourEvent::Gossipsub(gossipsub::Event::Message {
+    //                 propagation_source: peer_id,
+    //                 message_id: id,
+    //                 message,
+    //             })) => info!(
+    //                     "📩 Got message: '{}' with id: {id} from peer: {peer_id}",
+    //                     String::from_utf8_lossy(&message.data),
+    //                 ),
+    //             SwarmEvent::NewListenAddr { address, .. } => {
+    //                 info!("Local node is listening on {address}");
+    //             }
+    //             _ => {}
+    //             }
+    //         }
+    //     }
+    //
+    }
 }
 
 #[warn(dead_code)]
@@ -103,25 +164,46 @@ impl Libp2pNetwork {
             .build()
     }
 
-    pub async fn run(&mut self) {
-        while let Some(event) = self.swarm.next().await {
-            info!("Swarm event: {:?}", event);
-        }
-    }
-
     /// Start listening on a given address
-    pub fn listen(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
-        let addr: Multiaddr = address.parse()?;
-        self.swarm.listen_on(addr)?;
-        info!("Listening on {}", address);
+    pub async fn listen(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
+        let mut listen = Self::create_swarm().await;
+        match listen.listen_on(address.parse::<Multiaddr>().unwrap()) {
+            Ok(_) =>{
+                info!("👂 Network2 listening on Network1...");
+                loop {
+                    tokio::select! {
+                        event = listen.next() => {
+                            if let Some(event) = event {
+                                println!("🌐 Network1 Event: {:?}\n", event);
+                            }
+                        }
+                    }
+                }
+            },
+            Err(e) => {
+                error!("❌ Network2 failed to listen: {:?}", e);
+            }
+        }
         Ok(())
     }
 
     /// Dial a given address
-    pub fn dial(&mut self, address: &str) -> Result<(), Box<dyn Error>> {
-        let addr: Multiaddr = address.parse()?;
-        self.swarm.dial(addr)?;
-        info!("Dialing {}", address);
+    pub async fn dial(&mut self, address: Multiaddr) -> Result<(), Box<dyn Error>> {
+        let mut dial = Self::create_swarm().await;
+        match dial.dial(address) {
+            Ok(_) =>{
+                info!("📞 Network2 dialing Network1...");
+            },
+            Err(e) => {
+                error!("❌ Network2 failed to dial: {:?}", e);
+                return Err(Box::new(e));
+            }
+        };
+        tokio::spawn(async move {
+            while let Some(event) = dial.next().await {
+                info!("🌐 Network1 Event: {:?}", event);
+            }
+        });
         Ok(())
     }
 }
