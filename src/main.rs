@@ -1,5 +1,5 @@
 use libp2p::futures::StreamExt;
-use libp2p::{gossipsub, Multiaddr, swarm::SwarmEvent, Swarm};
+use libp2p::{gossipsub, Multiaddr, swarm::SwarmEvent, Swarm };
 use networks::Network;
 use server::Server;
 use std::error::Error;
@@ -31,7 +31,6 @@ pub enum MyBehaviourEvent {
     Mdns(mdns::Event),
     Gossipsub(gossipsub::Event),
 }
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     println!("🦀");
@@ -151,8 +150,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match Network::dial(&mut net_dial_1, dial_addr).await {
         Ok(_) => info!("✅ Dial successful"),
         Err(e) => {
-            error!("❌ Dial error: {:?}", e);
-            return Err(Box::new(e));
+            error!("❌ Dial error: {}",e);
+            return Err(e);
         },
     }
 
@@ -203,7 +202,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
-
 
     // Network2 dials network1
     //match network2.dial("/ip4/193.151.152.51/tcp/8080".parse::<Multiaddr>().unwrap()) {

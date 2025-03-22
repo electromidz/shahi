@@ -6,7 +6,7 @@ pub use libp2p::DummyBehaviour;
 use ::libp2p::{Multiaddr, Swarm};
 use libp2p::Libp2pNetwork;
 use std::error::Error;
-use ::libp2p::swarm::DialError;
+pub use ::libp2p::swarm::DialError;
 use libp2p::gossipsub;
 use tracing::error;
 
@@ -33,10 +33,10 @@ impl Network {
             Err(e) => Err(e.into()),
         }
     }
-    pub async fn dial(network: &mut Swarm<DummyBehaviour>, address: Multiaddr) -> Result<(), Box<dyn Error>> {
+    pub async fn dial(network: &mut Swarm<DummyBehaviour>, address: Multiaddr) -> Result<(),DialError> {
         match network.dial(address) {
             Ok(_) => Ok(()),
-            Err(e) => Err(Box::new(e) as Box<dyn Error>),
+            Err(e) => Err(e),
         }
     }
     pub async fn start_gossip()-> Result<(Swarm<MyBehaviour>), Box<dyn Error>> {

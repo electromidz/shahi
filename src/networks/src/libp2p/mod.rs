@@ -16,6 +16,7 @@ use libp2p::gossipsub::IdentTopic;
 use tracing::{info, error};
 use tokio::{time::sleep , io, io::AsyncBufReadExt};
 use std::sync::Arc;
+use libp2p::swarm::DialError;
 use tokio::sync::Mutex;
 
 
@@ -188,7 +189,7 @@ impl Libp2pNetwork {
     }
 
     /// Dial a given address
-    pub async fn dial(&mut self, address: Multiaddr) -> Result<(), Box<dyn Error>> {
+    pub async fn dial(&mut self, address: Multiaddr) -> Result<(), DialError> {
         let mut dial = Self::create_swarm().await;
         match dial.dial(address) {
             Ok(_) =>{
@@ -196,7 +197,7 @@ impl Libp2pNetwork {
             },
             Err(e) => {
                 error!("❌ Network2 failed to dial: {:?}", e);
-                return Err(Box::new(e));
+                return Err(e);
             }
         };
         tokio::spawn(async move {
