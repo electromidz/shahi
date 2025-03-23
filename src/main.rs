@@ -16,7 +16,6 @@ pub mod blockchain;
 pub mod contracts;
 pub mod mempool;
 pub mod transaction;
-mod error;
 
 use blockchain::Blockchain;
 use mempool::Mempool;
@@ -25,7 +24,6 @@ use gossipsub::Behaviour;
 
 use libp2p::mdns;
 use networks::libp2p::{Libp2pNetwork, MyBehaviourEvent as GossipEvent};
-use error::{Result, MyError};
 
 
 #[derive(Debug)]
@@ -34,7 +32,8 @@ pub enum MyBehaviourEvent {
     Gossipsub(gossipsub::Event),
 }
 #[tokio::main]
-async fn main() -> Result<()> {
+//async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Box<dyn Error>> {
     println!("🦀");
     // Initialize logging
     tracing_subscriber::fmt::init();
@@ -128,10 +127,10 @@ async fn main() -> Result<()> {
 
     // Give some time for network1 to start before dialing
     sleep(Duration::from_secs(2)).await;
-    // match Network::start_gossip().await {
-    //     Ok(_)=> info!("gossip start"),
-    //     Err(e)=> error!("gossip start: {}", e)
-    // }
+    match Network::start_gossip().await {
+        Ok(_)=> info!("gossip start"),
+        Err(e)=> error!("gossip start: {}", e)
+    }
     //let mut swarm = Network::create_gossip().await.unwrap();
     let mut swarm = match Network::create_gossip().await {
         Ok(mut swarm) => {
@@ -139,7 +138,7 @@ async fn main() -> Result<()> {
             swarm.behaviour_mut().gossipsub.subscribe(&topic).unwrap();
             swarm
         }
-        Err(e)=>{error!("❌ Failed to create gossipsub swarm: {:?}", e); return Err(Box::new(e));},
+        Err(e)=>{error!("❌ Failed to create gossipsub swarm: {:?}", e); return Err(e);},
     };
     let mut stdin = io::BufReader::new(io::stdin()).lines();
     let topic = gossipsub::IdentTopic::new("test-net");
@@ -147,15 +146,15 @@ async fn main() -> Result<()> {
     let mut net_dial_1 = Network::create().await;
 
     let dial_addr = "/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap();
-    //Network::dial(&mut net_dial_1, dial_addr).await.unwrap();
+    // Network::dial(&mut net_dial_1, dial_addr).await.unwrap();
     // ✅ Corrected: Must `await` the function call
     match Network::dial(&mut net_dial_1, dial_addr).await {
         Ok(_) => info!("✅ Dial successful"),
         Err(e) => {
             error!("❌ Dial error: {}",e);
-            return Err(Box::new(MyError::Dial(e)));
+            return Err(Box::new(e));
         },
-    }
+    };
 
     loop {
         tokio::select! {
@@ -204,7 +203,6 @@ async fn main() -> Result<()> {
             }
         }
     }
-    Ok(())
 
     // Network2 dials network1
     //match network2.dial("/ip4/193.151.152.51/tcp/8080".parse::<Multiaddr>().unwrap()) {
@@ -229,5 +227,5 @@ async fn main() -> Result<()> {
     //         }
     //     }
     // }
-    //Ok(())
+    //  Ok(())
 }
