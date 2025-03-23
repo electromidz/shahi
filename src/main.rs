@@ -16,6 +16,7 @@ pub mod blockchain;
 pub mod contracts;
 pub mod mempool;
 pub mod transaction;
+mod error;
 
 use blockchain::Blockchain;
 use mempool::Mempool;
@@ -24,6 +25,7 @@ use gossipsub::Behaviour;
 
 use libp2p::mdns;
 use networks::libp2p::{Libp2pNetwork, MyBehaviourEvent as GossipEvent};
+use error::{Result, MyError};
 
 
 #[derive(Debug)]
@@ -32,7 +34,7 @@ pub enum MyBehaviourEvent {
     Gossipsub(gossipsub::Event),
 }
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     println!("🦀");
     // Initialize logging
     tracing_subscriber::fmt::init();
@@ -151,7 +153,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Ok(_) => info!("✅ Dial successful"),
         Err(e) => {
             error!("❌ Dial error: {}",e);
-            return Err(e);
+            return Err(Box::new(MyError::Dial(e)));
         },
     }
 
@@ -202,6 +204,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
+    Ok(())
 
     // Network2 dials network1
     //match network2.dial("/ip4/193.151.152.51/tcp/8080".parse::<Multiaddr>().unwrap()) {

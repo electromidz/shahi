@@ -16,7 +16,7 @@ use libp2p::gossipsub::IdentTopic;
 use tracing::{info, error};
 use tokio::{time::sleep , io, io::AsyncBufReadExt};
 use std::sync::Arc;
-use libp2p::swarm::DialError;
+pub use libp2p::swarm::DialError;
 use tokio::sync::Mutex;
 
 

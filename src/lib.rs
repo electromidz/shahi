@@ -4,3 +4,4 @@ pub mod blockchain;
 pub mod contracts;
 pub mod mempool;
 pub mod transaction;
+mod error;
