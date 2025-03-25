@@ -39,6 +39,12 @@ impl Network {
             Err(e) => Err(e),
         }
     }
+    pub async fn listen(network: &mut Swarm<DummyBehaviour>, address: Multiaddr) -> Result<(),DialError> {
+        match network.listen(address) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
     pub async fn start_gossip()-> Result<(Swarm<MyBehaviour>), Box<dyn Error>> {
         MyBehaviour::start_gossip().await
     }
