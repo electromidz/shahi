@@ -144,8 +144,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let topic = gossipsub::IdentTopic::new("test-net");
 
     let mut net_dial_1 = Network::create().await;
+    let mut net_listen_1 = Network::create().await;
 
     let dial_addr = "/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap();
+    let listen_addr = "/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap();
     // Network::dial(&mut net_dial_1, dial_addr).await.unwrap();
     // ✅ Corrected: Must `await` the function call
     match Network::dial(&mut net_dial_1, dial_addr).await {
@@ -156,11 +158,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
         },
     };
 
+    match Network::listen(&mut net_listen_1, listen_addr).await {
+        Ok(_) => info!("✅ Listen successful"),
+        Err(e) => error!("❌ Listen error: {}", e),
+    }
+
     loop {
         tokio::select! {
             event = net_dial_1.next() => {
                 if let Some(event) = event {
                     info!("📡 Network1 Event: {:?}", event);
+                }
+            }
+            event = net_listen_1.next() => {
+                if let Some(event) = event {
+                    info!("🌐 Network1 Event: {:?}", event);
                 }
             }
             line = stdin.next_line() => {
@@ -203,29 +215,4 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
-
-    // Network2 dials network1
-    //match network2.dial("/ip4/193.151.152.51/tcp/8080".parse::<Multiaddr>().unwrap()) {
-    // match network2.dial("/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap()) {
-    //     Ok(_) => info!("📞 Network2 dialing Network1..."),
-    //     Err(e) => {
-    //         error!("❌ Network2 failed to dial: {:?}", e);
-    //     }
-    // }
-
-    // loop {
-    //     tokio::select! {
-    //         // event = network1.next() => {
-    //         //     if let Some(event) = event {
-    //         //         println!("🌐 Network1 Event: {:?}\n", event);
-    //         //     }
-    //         // }
-    //         event = network2.next() => {
-    //             if let Some(event) = event {
-    //                 info!("📡 Network2 Event: {:?}\n", event);
-    //             }
-    //         }
-    //     }
-    // }
-    //  Ok(())
 }

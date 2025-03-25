@@ -3,7 +3,7 @@ pub mod libp2p;
 use libp2p::{ MyBehaviour };
 pub use libp2p::DummyBehaviour;
 
-use ::libp2p::{Multiaddr, Swarm};
+use ::libp2p::{Multiaddr, Swarm, Transport};
 use libp2p::Libp2pNetwork;
 use std::error::Error;
 pub use ::libp2p::swarm::DialError;
@@ -39,10 +39,10 @@ impl Network {
             Err(e) => Err(e),
         }
     }
-    pub async fn listen(network: &mut Swarm<DummyBehaviour>, address: Multiaddr) -> Result<(),DialError> {
-        match network.listen(address) {
+    pub async fn listen(network: &mut Swarm<DummyBehaviour>, address: Multiaddr) -> Result<(),Box<dyn Error>> {
+        match network.listen_on(address) {
             Ok(_) => Ok(()),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
     pub async fn start_gossip()-> Result<(Swarm<MyBehaviour>), Box<dyn Error>> {
