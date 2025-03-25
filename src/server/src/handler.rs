@@ -181,7 +181,6 @@ async fn receive_body(
 async fn send_json_response(
     stream: &mut RequestStream<BidiStream<Bytes>, Bytes>,
     status: StatusCode,
-    body: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let response = Response::builder()
         .status(status)

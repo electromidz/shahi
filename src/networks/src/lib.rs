@@ -8,7 +8,6 @@ use libp2p::Libp2pNetwork;
 use std::error::Error;
 pub use ::libp2p::swarm::DialError;
 use libp2p::gossipsub;
-use tracing::error;
 
 pub struct Network;
 

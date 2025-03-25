@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Server is running in the background...");
 
     // Simulate other work in the main program
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(Duration::from_secs(1)).await;
     info!("Main program is doing other work...");
 
     // Use `tokio::select!` to run both tasks concurrently
@@ -60,11 +60,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         // Simulate other work in the main program
         _ = async {
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
             info!("Main program is doing other work...");
 
             // Simulate more work
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            tokio::time::sleep(Duration::from_secs(2)).await;
             info!("Main program finished its work.");
         } => {}
     }
@@ -108,22 +108,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Print the current mempool state
     info!("📌 Mempool State:\n{:?}", mempool.get_transactions());
-
-    //server run
-
-    // if let Err(e) = init_p_2_p().await {
-    //     eprintln!("have error on init_p_2_p {:?}", e)
-    // }
-    //let mut network1 = Network::create().await;
-    // let mut network2 = Network::create().await;
-
-
-    //Start listening on network1
-    // network1
-    //     .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
-    //     .unwrap();
-
-    //info!("💈 Network1 is listening on /ip4/193.151.152.51/tcp/8080\n");
 
     // Give some time for network1 to start before dialing
     sleep(Duration::from_secs(2)).await;

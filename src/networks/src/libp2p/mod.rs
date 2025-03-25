@@ -79,10 +79,9 @@ impl MyBehaviour {
     }
 
     pub async fn start_gossip()->Result<(Swarm<MyBehaviour>), Box<dyn Error>> {
-        let topic = gossipsub::IdentTopic::new("test-net");
+        let topic = IdentTopic::new("test-net");
         let mut swarm = MyBehaviour::create_gossip_swarm().await?;
         swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
-        let mut stdin = io::BufReader::new(io::stdin()).lines();
         // Listen on all interfaces and whatever port the OS assigns
         swarm.listen_on("/ip4/0.0.0.0/udp/0/quic-v1".parse()?)?;
         swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
