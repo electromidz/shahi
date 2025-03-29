@@ -87,7 +87,6 @@ pub async fn handle_http3_request(
                     return send_json_response(
                         &mut stream,
                         StatusCode::BAD_REQUEST,
-                        r#"{"error": "Invalid JSON"}"#,
                     )
                     .await;
                 }
@@ -127,7 +126,6 @@ pub async fn handle_http3_request(
                     return send_json_response(
                         &mut stream,
                         StatusCode::BAD_REQUEST,
-                        r#"{"error": "Invalid JSON"}"#,
                     )
                     .await;
                 }

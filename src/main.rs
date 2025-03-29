@@ -115,7 +115,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Ok(_)=> info!("gossip start"),
         Err(e)=> error!("gossip start: {}", e)
     }
-    //let mut swarm = Network::create_gossip().await.unwrap();
+
     let mut swarm = match Network::create_gossip().await {
         Ok(mut swarm) => {
             let topic = gossipsub::IdentTopic::new("test-net");
@@ -132,8 +132,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let dial_addr = "/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap();
     let listen_addr = "/ip4/127.0.0.1/tcp/8080".parse::<Multiaddr>().unwrap();
-    // Network::dial(&mut net_dial_1, dial_addr).await.unwrap();
-    // ✅ Corrected: Must `await` the function call
+
     match Network::dial(&mut net_dial_1, dial_addr).await {
         Ok(_) => info!("✅ Dial successful"),
         Err(e) => {
