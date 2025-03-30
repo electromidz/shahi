@@ -4079,6 +4079,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tracing",
+ "transaction",
 ]
 
 [[package]]
@@ -4773,6 +4774,7 @@ name = "transaction"
 version = "0.1.0"
 dependencies = [
  "secp256k1",
+ "serde",
 ]
 
 [[package]]

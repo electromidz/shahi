@@ -64,45 +64,45 @@ async fn main() -> Result<(), Box<dyn Error>> {
         } => {}
     }
 
-    let mut blockchain = Blockchain::new(1);
-    let mut mempool = Mempool::new();
-
-    let secp = Secp256k1::new();
-    let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
-    let sender = public_key.to_string();
-    let receiver = "receiver_address".to_string();
-    let payload = Some("{\"type\":\"message\", \"content\":\"Hello, Blockchain!\"}".to_string()); // Example message payload
-
-    // Create a new transaction
-    let amount = Some(100);
-    let transaction = Transaction::new(sender, receiver, amount, payload, &secret_key);
-
-    if transaction.verify_signature() {
-        info!("✅ Transaction is valid. Adding to mempool...");
-        mempool.add_transaction(transaction.clone());
-    } else {
-        info!("❌ Transaction verification failed.");
-        return Ok(());
-    }
-
-    let transactions = mempool.get_transactions();
-    // Add transactions to a new block
-    if !transactions.is_empty() {
-        blockchain.add_block(transactions.clone());
-
-        // Remove transactions from mempool after adding them to a block
-        for tx in transactions {
-            mempool.remove_transaction(&tx);
-        }
-    } else {
-        info!("⚠️ No transactions available for the new block.");
-    }
-
-    // Print the current blockchain state
-    info!("📌 Blockchain State:\n{:?}", blockchain);
-
-    // Print the current mempool state
-    info!("📌 Mempool State:\n{:?}", mempool.get_transactions());
+    // let mut blockchain = Blockchain::new(1);
+    // let mut mempool = Mempool::new();
+    //
+    // let secp = Secp256k1::new();
+    // let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
+    // let sender = public_key.to_string();
+    // let receiver = "receiver_address".to_string();
+    // let payload = Some("{\"type\":\"message\", \"content\":\"Hello, Blockchain!\"}".to_string()); // Example message payload
+    //
+    // // Create a new transaction
+    // let amount = Some(100);
+    // let transaction = Transaction::new(sender, receiver, amount, payload, &secret_key);
+    //
+    // if transaction.verify_signature() {
+    //     info!("✅ Transaction is valid. Adding to mempool...");
+    //     mempool.add_transaction(transaction.clone());
+    // } else {
+    //     info!("❌ Transaction verification failed.");
+    //     return Ok(());
+    // }
+    //
+    // let transactions = mempool.get_transactions();
+    // // Add transactions to a new block
+    // if !transactions.is_empty() {
+    //     blockchain.add_block(transactions.clone());
+    //
+    //     // Remove transactions from mempool after adding them to a block
+    //     for tx in transactions {
+    //         mempool.remove_transaction(&tx);
+    //     }
+    // } else {
+    //     info!("⚠️ No transactions available for the new block.");
+    // }
+    //
+    // // Print the current blockchain state
+    // info!("📌 Blockchain State:\n{:?}", blockchain);
+    //
+    // // Print the current mempool state
+    // info!("📌 Mempool State:\n{:?}", mempool.get_transactions());
 
     // Give some time for network1 to start before dialing
     sleep(Duration::from_secs(2)).await;

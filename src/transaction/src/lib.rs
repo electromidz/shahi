@@ -2,8 +2,9 @@ use secp256k1::ecdsa::Signature;
 use secp256k1::hashes::{sha256, Hash};
 use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use std::str::FromStr;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Transaction {
     pub sender: String,          // Sender's public key (address)
     pub receiver: String,        // Receiver's public key (address)

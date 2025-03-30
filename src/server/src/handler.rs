@@ -10,12 +10,23 @@ use http::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{error, info, warn};
+use transaction::Transaction;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UserRegistration {
     address: String,
     public_key: Vec<u8>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct DummyTransaction {
+    pub sender: String,          // Sender's public key (address)
+    pub receiver: String,        // Receiver's public key (address)
+    pub amount: Option<u64>,     // Amount being transferred
+    pub payload: Option<String>, // Use for messaging NFT, etc
+    pub secret_key: String,
+}
+
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UserAddress {
@@ -105,10 +116,6 @@ pub async fn handle_http3_request(
                 None => warn!("Account does not exist: {:?}", user.address),
             };
 
-
-
-
-
             warn!("Received POST body: {}", body_str);
             // Create a JSON response for the /register route
             let response = Response::builder()
@@ -150,6 +157,49 @@ pub async fn handle_http3_request(
             db.get_account(address.address.clone());
             let balance = db.get_balance(address.address.clone()).unwrap();
             warn!("Your balance: {}", balance);
+
+            warn!("Received POST body: {}", body_str);
+            // Create a JSON response for the /register route
+            let response = Response::builder()
+                .status(StatusCode::OK)
+                .header("Content-Type", "application/json")
+                .body(())?;
+
+            // Send the response headers
+            stream.send_response(response).await?;
+
+            // Send the response body
+            stream
+                .send_data(Bytes::from(r#"{"message": true}"#))
+                .await?;
+        }
+
+        ("/sendBalance", &http::Method::POST) => {
+            let mut body = Vec::new();
+
+            // Read the request body data
+            while let Some(chunk) = stream.recv_data().await? {
+                body.extend_from_slice(&chunk.chunk());
+            }
+
+            // Convert body to a string (assuming JSON)
+            let body_str = String::from_utf8(body)?;
+
+            let send_balance: DummyTransaction = match serde_json::from_str(&body_str) {
+                Ok(send_balance) => send_balance,
+                Err(_) => {
+                    error!("Registered");
+                    return send_json_response(
+                        &mut stream,
+                        StatusCode::BAD_REQUEST,
+                    )
+                        .await;
+                }
+            };
+
+            let transaction = Transaction::new(send_balance.sender,send_balance.receiver,
+                send_balance.amount, send_balance.payload, send_balance.secret_key);
+            db.add_transaction(&transaction);
 
             warn!("Received POST body: {}", body_str);
             // Create a JSON response for the /register route
