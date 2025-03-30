@@ -591,6 +591,10 @@ dependencies = [
 [[package]]
 name = "blockchain"
 version = "0.1.0"
+dependencies = [
+ "block",
+ "transaction",
+]
 
 [[package]]
 name = "bs58"

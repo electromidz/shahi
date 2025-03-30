@@ -11,10 +11,6 @@ use tracing::{error, info};
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::Secp256k1;
 
-pub mod block;
-pub mod blockchain;
-pub mod contracts;
-pub mod mempool;
 
 use blockchain::Blockchain;
 use mempool::Mempool;
