@@ -1,6 +1,7 @@
 use bytes::{Buf, Bytes};
 use db::port::BlockchainDB;
 use db::RocksDBAdapter;
+use account::{Account, State};
 use h3::server::Connection as H3Connection;
 use h3::server::RequestStream;
 use h3_quinn::BidiStream;
@@ -8,7 +9,7 @@ use h3_quinn::Connection as H3QuinnConnection;
 use http::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UserRegistration {
@@ -84,6 +85,7 @@ pub async fn handle_http3_request(
             let user: UserRegistration = match serde_json::from_str(&body_str) {
                 Ok(user) => user,
                 Err(_) => {
+                    error!("Registered");
                     return send_json_response(
                         &mut stream,
                         StatusCode::BAD_REQUEST,
@@ -92,7 +94,20 @@ pub async fn handle_http3_request(
                 }
             };
 
-            db.create_account(user.address, user.public_key);
+            let mut account = State::new();
+            State::create_account(&mut account, user.address.clone(), user.public_key.clone());
+            let acc = State::get_account(&mut account, &user.address);
+            match acc {
+                Some(account) => {
+                    info!("Account created: {:?}", account);
+                    db.create_account(&account);
+                },
+                None => warn!("Account does not exist: {:?}", user.address),
+            };
+
+
+
+
 
             warn!("Received POST body: {}", body_str);
             // Create a JSON response for the /register route
@@ -123,6 +138,7 @@ pub async fn handle_http3_request(
             let address: UserAddress = match serde_json::from_str(&body_str) {
                 Ok(addr) => addr,
                 Err(_) => {
+                    error!("thuis error");
                     return send_json_response(
                         &mut stream,
                         StatusCode::BAD_REQUEST,
@@ -131,7 +147,9 @@ pub async fn handle_http3_request(
                 }
             };
 
-            db.get_account(address.address);
+            db.get_account(address.address.clone());
+            let balance = db.get_balance(address.address.clone()).unwrap();
+            warn!("Your balance: {}", balance);
 
             warn!("Received POST body: {}", body_str);
             // Create a JSON response for the /register route

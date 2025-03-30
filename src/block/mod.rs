@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 use tracing::info;
 
-use crate::transaction::Transaction;
+use transaction::Transaction;
 
 #[derive(Debug, Clone)]
 pub struct Block {

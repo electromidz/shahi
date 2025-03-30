@@ -1,5 +1,5 @@
 use crate::block::Block;
-use crate::transaction::Transaction;
+use transaction::Transaction;
 
 #[derive(Debug, Clone)]
 pub struct Blockchain {

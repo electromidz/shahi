@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 COPY Cargo.toml Cargo.lock ./
 
 # Pre-build dependencies to leverage caching
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs
+RUN mkdir -p src && echo "fn main() {}" > src/lib
 RUN cargo build --release || true  # Allow failure due to missing dependencies
 
 # Copy the full source code

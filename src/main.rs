@@ -2,6 +2,7 @@ use libp2p::futures::StreamExt;
 use libp2p::{gossipsub, Multiaddr, swarm::SwarmEvent, Swarm };
 use networks::Network;
 use server::Server;
+use account::Account;
 use std::error::Error;
 use std::time::Duration;
 use tokio::{time::sleep , io, io::AsyncBufReadExt, io::stdin};
@@ -10,12 +11,10 @@ use tracing::{error, info};
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::Secp256k1;
 
-pub mod account;
 pub mod block;
 pub mod blockchain;
 pub mod contracts;
 pub mod mempool;
-pub mod transaction;
 
 use blockchain::Blockchain;
 use mempool::Mempool;

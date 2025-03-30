@@ -1,6 +1,8 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-#[derive(Clone, Debug, Serialize, Deserialize)]
+use bincode::{Decode, Encode};
+
+#[derive(Clone, Debug, Serialize, Deserialize, Encode, Decode)]
 pub struct Account {
     pub address: String,          // Unique account address
     pub public_key: Vec<u8>,      // Public key (for verification)
@@ -48,6 +50,13 @@ impl State {
         } else {
             Err("Account not found".to_string())
         }
+    }
+
+    pub fn get_balance(&mut self, address: &str) -> Result<u64, String> {
+        self.accounts
+            .get(address)
+            .map(|account| account.balance)
+            .ok_or_else(|| "Account not found".to_string())
     }
 
     /// Increment the sequence number (nonce) for an account
