@@ -8,6 +8,9 @@ networks = { path = "src/networks" }
 server = { path = "./src/server" }
 account= { path = "./src/account" }
 transaction= { path = "./src/transaction" }
+block= { path = "./src/block" }
+blockchain= { path = "./src/blockchain" }
+mempool = {path="./src/mempool"}
 db = { path = "./src/db" }
 chrono = "0.4.39"
 libp2p = { version = "0.55.0", features = [

@@ -540,6 +540,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "block"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sha2 0.10.8",
+ "tracing",
+ "transaction",
+]
+
+[[package]]
 name = "block-buffer"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -577,6 +587,10 @@ checksum = "fa79dedbb091f449f1f39e53edf88d5dbe95f895dae6135a8d7b881fb5af73f5"
 dependencies = [
  "byte-tools",
 ]
+
+[[package]]
+name = "blockchain"
+version = "0.1.0"
 
 [[package]]
 name = "bs58"
@@ -2680,6 +2694,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
+name = "mempool"
+version = "0.1.0"
+dependencies = [
+ "transaction",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4109,11 +4130,14 @@ version = "0.1.0"
 dependencies = [
  "account",
  "bincode",
+ "block",
+ "blockchain",
  "chrono",
  "db",
  "gossipsub",
  "libp2p",
  "log",
+ "mempool",
  "networks",
  "pretty_env_logger",
  "rand 0.9.0",
