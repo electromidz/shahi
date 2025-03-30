@@ -1,4 +1,4 @@
-use rocksdb::{DB, Options};
+use rocksdb::{DB, Options, Transaction};
 use tracing::{error, info};
 use account::Account;
 use serde_json;
@@ -7,6 +7,7 @@ use bincode::{encode_to_vec, config};
 pub mod port;
 
 use port::BlockchainDB;
+use transaction::Transaction as TransactionBalance;
 
 pub struct RocksDBAdapter {
     db: DB,
@@ -78,5 +79,9 @@ impl BlockchainDB for RocksDBAdapter {
                 Err(format!("Database error: {:?}", e))
             }
         }
+    }
+
+    fn add_transaction(&self, transaction: &TransactionBalance) -> Result<(), String> {
+        Ok(())
     }
 }
