@@ -1,16 +1,17 @@
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 use bincode::{Decode, Encode};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
+let Address : String;
 #[derive(Clone, Debug, Serialize, Deserialize, Encode, Decode)]
 pub struct Account {
-    pub address: String,          // Unique account address
-    pub public_key: Vec<u8>,      // Public key (for verification)
-    pub balance: u64,             // Account balance
-    pub sequence_number: u64,     // Nonce for replay protection
-    pub info: String,             // Account metadata
+    pub address: Address,      // Unique account address
+    pub public_key: Vec<u8>,  // Public key (for verification)
+    pub balance: u64,         // Account balance
+    pub sequence_number: u64, // Nonce for replay protection
+    pub info: String,         // Account metadata
     pub permissions: Vec<String>, // Permissions for the account
-    // Add other metadata as needed (e.g., staking info, permissions)
+                              // Add other metadata as needed (e.g., staking info, permissions)
 }
 
 pub struct State {
