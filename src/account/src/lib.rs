@@ -2,10 +2,9 @@ use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-let Address : String;
 #[derive(Clone, Debug, Serialize, Deserialize, Encode, Decode)]
 pub struct Account {
-    pub address: Address,      // Unique account address
+    pub address: String,      // Unique account address
     pub public_key: Vec<u8>,  // Public key (for verification)
     pub balance: u64,         // Account balance
     pub sequence_number: u64, // Nonce for replay protection

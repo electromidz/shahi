@@ -198,7 +198,7 @@ pub async fn handle_http3_request(
             };
 
             let transaction = Transaction::new(send_balance.sender,send_balance.receiver,
-                send_balance.amount, send_balance.payload, send_balance.secret_key);
+                send_balance.amount, send_balance.payload);
             db.add_transaction(&transaction);
 
             warn!("Received POST body: {}", body_str);

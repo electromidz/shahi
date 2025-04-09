@@ -106,6 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Give some time for network1 to start before dialing
     sleep(Duration::from_secs(2)).await;
+    let o = 12;
     match Network::start_gossip().await {
         Ok(_)=> info!("gossip start"),
         Err(e)=> error!("gossip start: {}", e)

@@ -10,7 +10,7 @@ pub struct Transaction {
     pub receiver: String,        // Receiver's public key (address)
     pub amount: Option<u64>,     // Amount being transferred
     pub payload: Option<String>, // Use for messaging NFT, etc
-    pub signature: Vec<u8>,      // Digital signature
+    //pub signature: Vec<u8>,      // Digital signature
 }
 
 impl Transaction {
@@ -20,16 +20,16 @@ impl Transaction {
         receiver: String,
         amount: Option<u64>,
         payload: Option<String>,
-        secret_key: &SecretKey,
+        //secret_key: &SecretKey,
     ) -> Self {
         let message = Self::create_message(&sender, &receiver, amount);
-        let signature = Self::sign_transaction(&message, secret_key);
+        //let signature = Self::sign_transaction(&message, secret_key);
         Transaction {
             sender,
             receiver,
             amount,
             payload,
-            signature,
+            //signature,
         }
     }
 
@@ -48,19 +48,19 @@ impl Transaction {
     }
 
     // Verify the transaction's signature
-    pub fn verify_signature(&self) -> bool {
-        let secp = Secp256k1::new();
-        let message = Self::create_message(&self.sender, &self.receiver, self.amount);
-        let signature = match Signature::from_der(&self.signature) {
-            Ok(sig) => sig,
-            Err(_) => return false,
-        };
-        let public_key = match PublicKey::from_str(&self.sender) {
-            Ok(pubkey) => pubkey,
-            Err(_) => return false,
-        };
-        secp.verify_ecdsa(&message, &signature, &public_key).is_ok()
-    }
+    // pub fn verify_signature(&self) -> bool {
+    //     let secp = Secp256k1::new();
+    //     let message = Self::create_message(&self.sender, &self.receiver, self.amount);
+    //     let signature = match Signature::from_der(&self.signature) {
+    //         Ok(sig) => sig,
+    //         Err(_) => return false,
+    //     };
+    //     let public_key = match PublicKey::from_str(&self.sender) {
+    //         Ok(pubkey) => pubkey,
+    //         Err(_) => return false,
+    //     };
+    //     secp.verify_ecdsa(&message, &signature, &public_key).is_ok()
+    // }
 }
 
 #[cfg(test)]
