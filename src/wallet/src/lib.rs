@@ -6,7 +6,6 @@ use secp256k1::{PublicKey, Secp256k1, SecretKey};
 pub struct Wallet {
     name: Option<String>,
     public_key: PublicKey,
-    secret_key: SecretKey, // Keep this private
     address: String,
 }
 
@@ -19,7 +18,6 @@ impl Wallet {
 
         Wallet {
             name,
-            secret_key,
             public_key,
             address,
         }
