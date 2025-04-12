@@ -1,5 +1,4 @@
 use rustls::ServerConfig;
-mod auth;
 mod handler;
 mod route;
 mod utils;

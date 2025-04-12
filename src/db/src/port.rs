@@ -1,4 +1,3 @@
-use rocksdb::Transaction;
 use account::Account;
 use transaction::Transaction as TranactionBlalance;
 

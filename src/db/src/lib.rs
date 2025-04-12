@@ -1,8 +1,6 @@
-use rocksdb::{DB, Options, Transaction};
+use rocksdb::{DB, Options};
 use tracing::{error, info};
 use account::Account;
-use serde_json;
-use std::fmt;
 use bincode::{encode_to_vec, config};
 pub mod port;
 
@@ -81,7 +79,8 @@ impl BlockchainDB for RocksDBAdapter {
         }
     }
 
-    fn add_transaction(&self, transaction: &TransactionBalance) -> Result<(), String> {
+    #[warn(unused_variables)]
+    fn add_transaction(&self, _transaction: &TransactionBalance) -> Result<(), String> {
         Ok(())
     }
 }

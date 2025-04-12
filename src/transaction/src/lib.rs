@@ -1,7 +1,3 @@
-use secp256k1::ecdsa::Signature;
-use secp256k1::hashes::{sha256, Hash};
-use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
-use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -22,7 +18,7 @@ impl Transaction {
         payload: Option<String>,
         //secret_key: &SecretKey,
     ) -> Self {
-        let message = Self::create_message(&sender, &receiver, amount);
+        //let message = Self::create_message(&sender, &receiver, amount);
         //let signature = Self::sign_transaction(&message, secret_key);
         Transaction {
             sender,
@@ -34,18 +30,21 @@ impl Transaction {
     }
 
     // Create a message to sign (sender + receiver + amount)
-    fn create_message(sender: &str, receiver: &str, amount: Option<u64>) -> Message {
-        let data = format!("{}{}{:?}", sender, receiver, amount);
-        let hash = sha256::Hash::hash(data.as_bytes());
-        Message::from_digest(hash.to_byte_array())
-    }
-
-    // Sign the transaction
-    fn sign_transaction(message: &Message, secret_key: &SecretKey) -> Vec<u8> {
-        let secp = Secp256k1::new();
-        let signature = secp.sign_ecdsa(message, secret_key);
-        signature.serialize_der().to_vec()
-    }
+    // #[warn(dead_code)]
+    // fn create_message(sender: &str, receiver: &str, amount: Option<u64>) -> Message {
+    //     let data = format!("{}{}{:?}", sender, receiver, amount);
+    //     let hash = sha256::Hash::hash(data.as_bytes());
+    //     Message::from_digest(hash.to_byte_array())
+    // }
+    //
+    // // Sign the transaction
+    //
+    // #[warn(dead_code)]
+    // fn sign_transaction(message: &Message, secret_key: &SecretKey) -> Vec<u8> {
+    //     let secp = Secp256k1::new();
+    //     let signature = secp.sign_ecdsa(message, secret_key);
+    //     signature.serialize_der().to_vec()
+    // }
 
     // Verify the transaction's signature
     // pub fn verify_signature(&self) -> bool {

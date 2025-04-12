@@ -1,7 +1,7 @@
 use bytes::{Buf, Bytes};
 use db::port::BlockchainDB;
 use db::RocksDBAdapter;
-use account::{Account, State};
+use account::{State};
 use h3::server::Connection as H3Connection;
 use h3::server::RequestStream;
 use h3_quinn::BidiStream;
@@ -64,6 +64,7 @@ pub async fn handle_http3_request(
     mut stream: RequestStream<BidiStream<Bytes>, Bytes>, // Use h3_quinn::BidiStream
     db: Arc<dyn BlockchainDB>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    //create wallet
     // Match the request path and method
     match (request.uri().path(), request.method()) {
         ("/login", &http::Method::GET) => {
@@ -199,7 +200,7 @@ pub async fn handle_http3_request(
 
             let transaction = Transaction::new(send_balance.sender,send_balance.receiver,
                 send_balance.amount, send_balance.payload);
-            db.add_transaction(&transaction);
+            let _ = db.add_transaction(&transaction);
 
             warn!("Received POST body: {}", body_str);
             // Create a JSON response for the /register route
@@ -233,15 +234,16 @@ pub async fn handle_http3_request(
 }
 
 // Read request body
-async fn receive_body(
-    stream: &mut RequestStream<BidiStream<Bytes>, Bytes>,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let mut body = Vec::new();
-    while let Some(chunk) = stream.recv_data().await? {
-        body.extend_from_slice(&chunk.chunk());
-    }
-    String::from_utf8(body).map_err(|e| e.into())
-}
+// #[warn(dead_code)]
+// async fn receive_body(
+//     stream: &mut RequestStream<BidiStream<Bytes>, Bytes>,
+// ) -> Result<String, Box<dyn std::error::Error>> {
+//     let mut body = Vec::new();
+//     while let Some(chunk) = stream.recv_data().await? {
+//         body.extend_from_slice(&chunk.chunk());
+//     }
+//     String::from_utf8(body).map_err(|e| e.into())
+// }
 
 // Helper function to send JSON responses
 async fn send_json_response(

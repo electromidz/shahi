@@ -13,14 +13,11 @@ use std::{
     time::Duration,
 };
 use libp2p::gossipsub::IdentTopic;
-use tracing::{info, error};
-use tokio::{time::sleep , io, io::AsyncBufReadExt};
-use std::sync::Arc;
+use tracing::{info, error, warn};
+use tokio::io;
 pub use libp2p::swarm::DialError;
-use tokio::sync::Mutex;
 
 
-#[warn(dead_code)]
 pub struct Libp2pNetwork {
     swarm: Swarm<ping::Behaviour>,
 }
@@ -78,7 +75,7 @@ impl MyBehaviour {
         Ok(swarm)
     }
 
-    pub async fn start_gossip()->Result<(Swarm<MyBehaviour>), Box<dyn Error>> {
+    pub async fn start_gossip()->Result<Swarm<MyBehaviour>, Box<dyn Error>> {
         let topic = IdentTopic::new("test-net");
         let mut swarm = MyBehaviour::create_gossip_swarm().await?;
         swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
@@ -87,50 +84,6 @@ impl MyBehaviour {
         swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
         info!("Enter messages via STDIN and they will be sent to connected peers using Gossipsub");
         Ok(swarm)
-
-    //     loop {
-    //         tokio::select! {
-    //             line = stdin.next_line() => {
-    //                 if let Ok(Some(input)) = line {
-    //                     let message = input.clone();
-    //                     info!("✉️ Sending message: {}", message);
-    //                     if let Err(e) = swarm.behaviour_mut().gossipsub.publish(topic.clone(), message.as_bytes()) {
-    //                         error!("❌ Failed to send message: {:?}", e);
-    //                     } else {
-    //                         info!("📨 Message sent!");
-    //                     }
-    //                 }
-    //             }
-    //
-    //             event = swarm.select_next_some() => match event {
-    //               SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
-    //                 for (peer_id, _multiaddr) in list {
-    //                     info!("mDNS discovered a new peer: {peer_id}");
-    //                     swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
-    //                 }
-    //             },
-    //             SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Expired(list))) => {
-    //                 for (peer_id, _multiaddr) in list {
-    //                     info!("mDNS discover peer has expired: {peer_id}");
-    //                     swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
-    //                 }
-    //             },
-    //             SwarmEvent::Behaviour(MyBehaviourEvent::Gossipsub(gossipsub::Event::Message {
-    //                 propagation_source: peer_id,
-    //                 message_id: id,
-    //                 message,
-    //             })) => info!(
-    //                     "📩 Got message: '{}' with id: {id} from peer: {peer_id}",
-    //                     String::from_utf8_lossy(&message.data),
-    //                 ),
-    //             SwarmEvent::NewListenAddr { address, .. } => {
-    //                 info!("Local node is listening on {address}");
-    //             }
-    //             _ => {}
-    //             }
-    //         }
-    //     }
-    //
     }
 }
 
@@ -204,24 +157,3 @@ fn instance_swarm() {
     let network = Libp2pNetwork::new();
     assert!(network.is_ok(), "Faild to create network");
 }
-// #[tokio::test]
-// async fn instance() {
-//     let network = Libp2pNetwork::new();
-//     assert!(network.is_ok(), "Faild to create network");
-//
-//     let mut network = network.unwrap();
-//     network.run().await;
-// }
-// #[tokio::test]
-// async fn test_listen_and_dial() {
-//     let mut network1 = Libp2pNetwork::new().expect("Failed to create network");
-//     let mut network2 = Libp2pNetwork::new().expect("Failed to create network");
-//
-//     let listen_address = "/ip4/127.0.0.1/tcp/0"; // Use port 0 for automatic allocation
-//
-//     assert!(
-//         network1.listen(listen_address).is_ok(),
-//         "Failed to start listening"
-//     );
-//     assert!(network2.dial(listen_address).is_ok(), "Failed to dial");
-// }
