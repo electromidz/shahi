@@ -4,7 +4,6 @@ use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
 #[derive(Debug)]
 pub struct Wallet {
-    name: Option<String>,
     public_key: PublicKey,
     address: String,
 }
@@ -17,7 +16,6 @@ impl Wallet {
         let address = derive_address(&public_key);
 
         Wallet {
-            name,
             public_key,
             address,
         }
@@ -31,11 +29,6 @@ impl Wallet {
     /// Get the wallet address.
     pub fn address(&self) -> &str {
         &self.address
-    }
-
-    /// Get the wallet name.
-    pub fn name(&self) -> Option<&String> {
-        self.name.as_ref()
     }
 }
 
