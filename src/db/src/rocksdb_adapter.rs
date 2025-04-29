@@ -2,10 +2,9 @@ use rocksdb::{DB, Options};
 use tracing::{error, info};
 use account::Account;
 use bincode::{encode_to_vec, config};
-pub mod port;
 
-use port::BlockchainDB;
 use transaction::Transaction as TransactionBalance;
+use crate::port::BlockchainDB;
 
 pub struct RocksDBAdapter {
     db: DB,
